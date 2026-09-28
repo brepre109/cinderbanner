@@ -1,0 +1,12 @@
+{
+  "description": "Isometric tactical RPG for the browser in Three.js: charge-time battles, 30 jobs, a two-chapter campaign, map editor.",
+  "topics": [
+    "threejs",
+    "tactical-rpg",
+    "game",
+    "javascript",
+    "vite",
+    "isometric"
+  ],
+  "homepage": "https://brepre109.github.io/cinderbanner/"
+}
