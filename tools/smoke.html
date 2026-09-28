@@ -1,0 +1,9 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id=c></canvas>
+<script type="module">
+import * as THREE from '/node_modules/three/build/three.module.js';
+const r=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});r.setSize(400,300);
+const s=new THREE.Scene();s.background=new THREE.Color(0x203050);const cam=new THREE.PerspectiveCamera(40,4/3,0.1,100);cam.position.set(3,3,5);cam.lookAt(0,0,0);
+const m=new THREE.Mesh(new THREE.BoxGeometry(2,1,2),new THREE.MeshStandardMaterial({color:0x66aa44}));s.add(m);
+const l=new THREE.DirectionalLight(0xffffff,2);l.position.set(2,5,3);s.add(l);s.add(new THREE.AmbientLight(0x4060a0,1));
+r.render(s,cam);window.__ready=true;
+</script></body></html>
