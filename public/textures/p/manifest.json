@@ -1,0 +1,4 @@
+{
+ "texels_per_tile": 64,
+ "note": "painted set by the terrain owner; see _paint.py"
+}

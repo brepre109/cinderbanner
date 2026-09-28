@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cinderbanner — Map Builder</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/src/ui/ui.css">
+<link rel="stylesheet" href="/src/editor/editor.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="ed">
+  <div class="ed-boot" id="ed-boot"><b>Map Builder</b><span>booting…</span></div>
+</div>
+<script type="module">
+// src/editor/main.js belongs to a later wave and is not in the tree yet. A plain import of it --
+// static OR dynamic with a literal specifier -- is a hard `vite build` failure ("Failed to resolve
+// import"), which would take the GAME build down with it. import.meta.glob resolves to `{}` while
+// the file is absent, and starts bundling it into this entry the moment it lands, with no edit
+// here: the boot below is the final wiring, not a stopgap to be replaced.
+const mods = import.meta.glob('/src/editor/main.js');
+const boot = document.getElementById('ed-boot');
+const say = (cls, head, body) => { boot.className = 'ed-boot ' + cls; boot.innerHTML = ''; const b = document.createElement('b'); b.textContent = head; const s = document.createElement('span'); s.textContent = body; boot.append(b, s); };
+try {
+  const load = mods['/src/editor/main.js'];
+  if (!load) throw new Error('src/editor/main.js is not in the tree yet (wave 4)');
+  await load();
+  boot.remove();              // main.js owns #ed from here; nothing of this shell survives boot
+} catch (e) {
+  // Printed INTO the page, not just the console: a white screen is the one failure mode that
+  // costs an hour to diagnose (PLAN 6.10 guarded boot).
+  say('err', 'Editor bootstrapping…', String((e && e.stack) || e));
+  console.error('[editor] boot failed', e);
+}
+</script>
+</body>
+</html>

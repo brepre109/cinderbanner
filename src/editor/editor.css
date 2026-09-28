@@ -1,0 +1,278 @@
+/* Cinderbanner — MAP BUILDER chrome.  Loaded AFTER /src/ui/ui.css, which supplies the fonts,
+   the :root token block, the html/body reset and .win/.tab/.srow/.ramp. This file adds nothing to
+   ui.css and overrides exactly one of its rules (#gl, see LAYOUT below).
+
+   The look is the game's, in its SLATE key: the genre window chrome (vertical gradient, 2px near-black
+   border, 1px light inner line, hard offset drop shadow, bitmap-serif type with a hard shadow) in
+   the blue that ui.js's `slate` theme uses, so the tool is unmistakably the same product as the
+   HUD and unmistakably NOT the HUD. Panels are #ed-scoped copies of `#ui.slate`'s tokens because
+   that selector is scoped to #ui and cannot reach here.
+
+   TYPE. Bitmap faces render only at integer multiples of their design size (9 -> 18/27,
+   12 -> 24/36, 13 -> 26/39) or the grid lands between pixels, so labels/headings use --f-small /
+   --f-big unchanged. Dense numerics do NOT: an 18px bitmap serif in a six-column shortcut table is
+   unreadable and unalignable, so tables, codes, coordinates and readouts use --f-num, a 12px
+   tabular mono. Bitmap for voice, mono for data.
+
+   ================================ CLASS-NAME CONTRACT ================================
+   Everything the wave-4 UI worker needs is here; nothing else in this file is public.
+   ROOT      #ed                      fixed full-screen grid, pointer-events:none (chrome re-enables)
+             html.ed-nodock/.ed-norail/.ed-scrub  layout modes; they move the shared size vars,
+                                      which #gl reads too, so the canvas follows the docks
+   LAYOUT    #gl                      inset into the viewport cell by the same vars
+   MENUBAR   .ed-menubar > .ed-brand | .ed-menu[.open] | .ed-spacer | .ed-badge[.err|.warn|.ok]
+             .ed-dropdown > .ed-mi[.dim][.on] > kbd | .ed-sep
+   RAIL      .ed-rail > .ed-tool[.on][data-k] (44px square, data-tip -> hover tooltip)
+   STRIP     .ed-strip > .ed-field > label + control | .ed-seg > button[.on] | .ed-div
+   DOCK      .ed-dock > .ed-panel[.collapsed] > .ed-panel-head (> .ed-caret,.ed-count) +
+             .ed-panel-body
+   DRAWER    .ed-drawer[.open] > .ed-drawer-head + .ed-drawer-body
+   SCRUB     .ed-scrubbar > .ed-field                (route compare, under the viewport)
+   STATUS    .ed-status > .ed-stat[.ok|.warn|.err] (> b) | .ed-spacer
+   CONTROLS  .ed-btn[.primary|.danger|.on|disabled] | .ed-input | .ed-select | .ed-range |
+             .ed-check | .ed-swatch | .ed-chip[.err|.warn|.info|.tier]
+   DATA      .ed-kv (inspector label/value grid) | .ed-table (> tr.sel, td.num) |
+             .ed-list > .ed-row[.sel][.err|.warn|.info] (> .code,.msg,.fix) |
+             .ed-meter[.hp|.mp|.ct|.bad] > i | .ed-layers > .ed-layer (> .eye,.lock,.nm)
+   FEEDBACK  .ed-toasts > .ed-toast[.ok|.warn|.err] | .ed-scrim + .ed-modal >
+             .ed-modal-head + .ed-modal-body + .ed-modal-foot | .ed-boot[.err]
+   HELPERS   .ed-scroll (styled overflow) | .ed-num | .ed-muted | .ed-hint | .ed-hide
+   ===================================================================================== */
+
+/* LAYOUT. The chrome is a grid; the canvas is NOT in that grid (it is #ed's sibling, so ui.css's
+   #gl rule keeps applying to it) and is instead inset by the same four variables. That is why the
+   vars live on :root and not on #ed. A layout mode is a class on <html>, so one classList toggle
+   moves the docks and the canvas together -- then main.js calls pipeline.resize(rect.w, rect.h),
+   which is mandatory: createPipeline reads innerWidth/innerHeight and would be a dock too wide. */
+:root { --ed-bar: 34px; --ed-rail: 56px; --ed-dock: 312px; --ed-strip: 40px; --ed-status: 26px; --ed-scrub: 0px;
+  --f-num: 12px/1.35 'DejaVu Sans Mono', ui-monospace, Menlo, Consolas, monospace; }
+html.ed-nodock { --ed-dock: 0px; }
+html.ed-norail { --ed-rail: 0px; }
+html.ed-scrub  { --ed-scrub: 34px; }
+#gl { inset: auto; width: auto; height: auto; left: var(--ed-rail); right: var(--ed-dock);
+  top: calc(var(--ed-bar) + var(--ed-strip)); bottom: calc(var(--ed-status) + var(--ed-scrub)); background: #0a0d18; }
+
+#ed { position: fixed; inset: 0; pointer-events: none; display: grid; overflow: hidden;
+  grid-template-columns: var(--ed-rail) 1fr var(--ed-dock);
+  grid-template-rows: var(--ed-bar) var(--ed-strip) 1fr var(--ed-scrub) var(--ed-status);
+  grid-template-areas: 'bar bar bar' 'rail strip dock' 'rail view dock' 'rail scrub dock' 'st st st';
+  /* #ui.slate's palette, re-declared: that selector is scoped to #ui and never reaches #ed. */
+  --pa: #6274bd; --pb: #33418c; --pc: #1b2564; --edge: #0b0f2a; --edge-in: rgba(215,225,255,.9);
+  --edge-in2: rgba(0,0,20,.35); --ink: #f3f5ff; --ink-hi: rgba(0,0,30,.7); --ink-dim: #99a1c6;
+  --ink-gold: #ffe08a; --ink-blue: #9fd8ff; --ink-red: #ff9b9b; --ink-green: #a8ff8c;
+  --ed-void: #10162e; --ed-well: #141b38; --ed-line: rgba(0,0,25,.55);
+  color: var(--ink); font: var(--f-small); text-shadow: 1px 1px 0 var(--ink-hi);
+  -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed; user-select: none; }
+#ed * { box-sizing: border-box; }
+#ed ::selection { background: #7fa8ff; color: #07091a; }
+
+/* The shared panel skin: one gradient, one hard border, one hard shadow -- .win's recipe, minus
+   .win's hide-by-default transition (editor chrome is always up; hiding is .ed-hide). */
+.ed-menubar, .ed-rail, .ed-strip, .ed-dock, .ed-status, .ed-scrubbar, .ed-dropdown, .ed-modal, .ed-toast, .ed-boot {
+  background: linear-gradient(180deg, var(--pa) 0%, var(--pb) 55%, var(--pc) 100%);
+  border: 2px solid var(--edge); box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2);
+  pointer-events: auto; }
+.ed-hide { display: none !important; }
+
+/* ---- menubar ------------------------------------------------------------------------------ */
+.ed-menubar { grid-area: bar; display: flex; align-items: stretch; gap: 2px; padding: 0 8px 0 0; border-width: 0 0 2px;
+  background: linear-gradient(180deg, #4d5da8 0%, #2b3878 58%, #17204f 100%); z-index: 40; }
+.ed-brand { display: flex; align-items: center; padding: 0 14px 0 12px; font: var(--f-small); color: var(--ink-gold);
+  letter-spacing: 1px; text-shadow: 1px 1px 0 #000; border-right: 1px solid var(--ed-line); }
+.ed-menu { display: flex; align-items: center; padding: 0 12px; font: var(--f-small); color: var(--ink); cursor: pointer;
+  border: 1px solid transparent; background: none; }
+.ed-menu:hover { background: rgba(255,255,255,.12); }
+.ed-menu.open { background: linear-gradient(180deg, #16204c, #232f6b); border-color: var(--edge); box-shadow: inset 1px 1px 0 rgba(0,0,20,.6); color: var(--ink-gold); }
+.ed-spacer { flex: 1; }
+.ed-badge { align-self: center; font: var(--f-num); padding: 2px 7px; border: 1px solid var(--edge); background: #202a5e;
+  color: var(--ink-dim); text-shadow: none; letter-spacing: .5px; }
+.ed-badge.ok { color: var(--ink-green); } .ed-badge.warn { color: var(--ink-gold); } .ed-badge.err { color: #fff; background: #7a1414; }
+
+.ed-dropdown { position: absolute; top: var(--ed-bar); min-width: 232px; padding: 5px 0; z-index: 60;
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 4px 5px 0 var(--dsh); }
+.ed-mi { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 26px; padding: 0 12px 0 14px;
+  cursor: pointer; white-space: nowrap; }
+.ed-mi:hover { background: rgba(255,255,255,.16); }
+.ed-mi.on::before { content: '\2713'; position: absolute; left: 4px; color: var(--ink-gold); }
+.ed-mi.dim { color: var(--ink-dim); pointer-events: none; }
+.ed-mi kbd { font: var(--f-num); color: #dfe6ff; text-shadow: none; padding: 1px 5px; border: 1px solid #5b68a8;
+  background: linear-gradient(180deg, #39457f, #1a2250); box-shadow: 1px 1px 0 rgba(0,0,0,.5); }
+.ed-sep { height: 0; margin: 5px 8px; border-top: 1px solid var(--ed-line); border-bottom: 1px solid rgba(255,255,255,.12); }
+
+/* ---- tool rail ---------------------------------------------------------------------------- */
+.ed-rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0;
+  border-width: 0 2px 0 0; overflow: visible; }
+.ed-tool { position: relative; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
+  font: var(--f-big); color: var(--ink); background: linear-gradient(180deg, #5667b0, #2b3878 60%, #1c2560);
+  border: 2px solid var(--edge); box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 2px 3px 0 var(--dsh); }
+.ed-tool:hover { background: linear-gradient(180deg, #6d7ec6, #35438c 60%, #222c6d); }
+.ed-tool.on { color: #0d1230; background: linear-gradient(180deg, #ffe9a8, #e0b64e 58%, #a67a1c); text-shadow: 1px 1px 0 rgba(255,255,255,.45);
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.7), inset -1px -1px 0 rgba(90,60,0,.5), 2px 3px 0 var(--dsh); }
+.ed-tool .k { position: absolute; right: 1px; bottom: 0; font: var(--f-num); color: var(--ink-dim); text-shadow: 1px 1px 0 #000; }
+.ed-tool.on .k { color: #4a3608; text-shadow: none; }
+.ed-tool img, .ed-tool svg { width: 26px; height: 26px; image-rendering: pixelated; }
+/* hover tooltip: data-tip, drawn to the RIGHT of the rail so it never covers the tool it names */
+.ed-tool[data-tip]:hover::after { content: attr(data-tip); position: absolute; left: 52px; top: 10px; z-index: 70;
+  font: var(--f-num); color: var(--ink); white-space: nowrap; padding: 3px 7px; text-shadow: none;
+  background: linear-gradient(180deg, var(--pa), var(--pc)); border: 1px solid var(--edge); box-shadow: 2px 3px 0 var(--dsh); }
+
+/* ---- tool-options strip (generated from brush.params) -------------------------------------- */
+.ed-strip { grid-area: strip; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-width: 0 0 2px;
+  overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+.ed-div { width: 0; align-self: stretch; margin: 6px 2px; border-left: 1px solid var(--ed-line); border-right: 1px solid rgba(255,255,255,.14); }
+.ed-field { display: flex; align-items: center; gap: 6px; font: var(--f-small); color: var(--ink); }
+.ed-field > label { color: var(--ink-dim); letter-spacing: .5px; }
+.ed-seg { display: flex; border: 2px solid var(--edge); box-shadow: 2px 3px 0 var(--dsh); }
+.ed-seg > button { font: var(--f-num); color: var(--ink); padding: 5px 9px; cursor: pointer; border: none; text-shadow: none;
+  background: linear-gradient(180deg, #4a5aa0, #232e6c); border-right: 1px solid var(--ed-line); }
+.ed-seg > button:last-child { border-right: none; }
+.ed-seg > button:hover { background: linear-gradient(180deg, #5d6db6, #2c3a80); }
+.ed-seg > button.on { color: #0d1230; background: linear-gradient(180deg, #ffe9a8, #d9ad45); }
+
+/* ---- controls ------------------------------------------------------------------------------ */
+.ed-btn { font: var(--f-small); color: var(--ink); padding: 3px 12px; cursor: pointer; text-shadow: 1px 1px 0 var(--ink-hi);
+  background: linear-gradient(180deg, #5667b0, #2b3878 60%, #1c2560); border: 2px solid var(--edge);
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 2px 3px 0 var(--dsh); }
+.ed-btn:hover { background: linear-gradient(180deg, #6d7ec6, #35438c 60%, #222c6d); }
+.ed-btn:active { transform: translate(1px, 1px); box-shadow: inset 1px 1px 0 var(--edge-in), 1px 2px 0 var(--dsh); }
+.ed-btn.primary { color: #16110a; background: linear-gradient(180deg, #ffe9a8, #e0b64e 58%, #a67a1c); text-shadow: 1px 1px 0 rgba(255,255,255,.45); }
+.ed-btn.danger { color: #fff; background: linear-gradient(180deg, #b8503f, #7a1f18 60%, #4d0f0c); }
+.ed-btn.on { color: #0d1230; background: linear-gradient(180deg, #cfe0ff, #7f97d8); }
+.ed-btn[disabled] { color: var(--ink-dim); filter: saturate(.3) brightness(.8); pointer-events: none; }
+.ed-input, .ed-select { font: var(--f-num); color: var(--ink); background: var(--ed-well); border: 2px solid var(--edge);
+  box-shadow: inset 1px 1px 0 rgba(0,0,25,.8), inset -1px -1px 0 rgba(255,255,255,.14); padding: 4px 6px; text-shadow: none;
+  min-width: 0; }
+.ed-input { width: 68px; text-align: right; font-variant-numeric: tabular-nums; }
+.ed-input[type=text] { text-align: left; width: 160px; }
+.ed-input:focus, .ed-select:focus { outline: none; border-color: #7fa8ff; box-shadow: inset 1px 1px 0 rgba(0,0,25,.8), 0 0 0 1px #7fa8ff; }
+.ed-select { min-width: 96px; }
+.ed-range { -webkit-appearance: none; appearance: none; width: 116px; height: 9px; background: linear-gradient(180deg, #1a2148, #2c3667);
+  border: 1px solid var(--edge); box-shadow: inset 0 1px 0 rgba(0,0,25,.9); }
+.ed-range::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 17px; background: linear-gradient(180deg, #ffe9a8, #c9992f);
+  border: 1px solid var(--edge); box-shadow: 1px 1px 0 var(--dsh); cursor: ew-resize; }
+.ed-range::-moz-range-thumb { width: 11px; height: 17px; background: linear-gradient(180deg, #ffe9a8, #c9992f); border: 1px solid var(--edge); }
+.ed-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.ed-check > input { appearance: none; width: 15px; height: 15px; background: var(--ed-well); border: 2px solid var(--edge);
+  box-shadow: inset 1px 1px 0 rgba(0,0,25,.8); display: grid; place-items: center; }
+.ed-check > input:checked::after { content: '\2713'; font: var(--f-num); color: var(--ink-gold); text-shadow: none; }
+.ed-swatch { width: 17px; height: 17px; border: 1px solid var(--edge); box-shadow: inset 1px 1px 0 rgba(255,255,255,.35), 1px 1px 0 var(--dsh); }
+.ed-chip { display: inline-block; font: var(--f-num); text-shadow: none; padding: 1px 6px; border: 1px solid var(--edge);
+  background: #2b3878; color: var(--ink); letter-spacing: .5px; }
+.ed-chip.tier { background: #1d4a6b; color: #bfe8ff; } .ed-chip.info { background: #24356e; color: var(--ink-blue); }
+.ed-chip.warn { background: #6b4d10; color: #ffe08a; }  .ed-chip.err  { background: #6d1616; color: #ffd7d7; }
+
+/* ---- right dock: stacked collapsible panels ------------------------------------------------ */
+.ed-dock { grid-area: dock; display: flex; flex-direction: column; border-width: 0 0 0 2px; overflow: hidden; }
+.ed-panel { display: flex; flex-direction: column; min-height: 0; border-bottom: 1px solid var(--ed-line); }
+.ed-panel.grow { flex: 1; }
+.ed-panel-head { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; cursor: pointer; flex: none;
+  font: var(--f-small); color: var(--ink-gold); letter-spacing: 1px; text-shadow: 1px 1px 0 #000;
+  background: linear-gradient(180deg, #3f4e97, #212c66); border-bottom: 1px solid var(--edge); box-shadow: inset 0 1px 0 rgba(255,255,255,.2); }
+.ed-panel-head:hover { background: linear-gradient(180deg, #4a5aa8, #27337a); }
+.ed-caret { width: 10px; color: var(--ink-dim); transition: transform .12s ease-out; }
+.ed-panel.collapsed .ed-caret { transform: rotate(-90deg); }
+.ed-panel.collapsed .ed-panel-body { display: none; }
+.ed-count { margin-left: auto; font: var(--f-num); color: var(--ink-dim); text-shadow: none; }
+.ed-panel-body { padding: 8px; overflow: auto; min-height: 0; }
+
+/* ---- issues drawer (bottom of the dock; opens over the panels, never resizes them) ---------- */
+.ed-drawer { position: absolute; right: 0; bottom: var(--ed-status); width: var(--ed-dock); max-height: 46vh; z-index: 30;
+  display: flex; flex-direction: column; transform: translateY(100%); transition: transform .16s cubic-bezier(.2,.8,.2,1);
+  pointer-events: auto; background: linear-gradient(180deg, var(--pb), var(--pc)); border: 2px solid var(--edge); border-right: none; }
+.ed-drawer.open { transform: none; }
+.ed-drawer-head { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; flex: none; cursor: pointer;
+  font: var(--f-small); color: var(--ink-gold); background: linear-gradient(180deg, #3f4e97, #212c66); border-bottom: 1px solid var(--edge); }
+.ed-drawer-body { overflow: auto; padding: 6px; }
+
+/* ---- inspector / tables / lists ------------------------------------------------------------ */
+.ed-kv { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 8px; align-items: center; font: var(--f-num); }
+.ed-kv > .k { color: var(--ink-dim); text-shadow: none; text-align: right; }
+.ed-kv > .v { color: var(--ink); text-shadow: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ed-table { width: 100%; border-collapse: collapse; font: var(--f-num); text-shadow: none; }
+.ed-table th { position: sticky; top: 0; z-index: 1; text-align: left; padding: 3px 6px; color: var(--ink-gold); font-weight: 400;
+  background: linear-gradient(180deg, #37448c, #232e6a); border-bottom: 1px solid var(--edge); white-space: nowrap; }
+.ed-table td { padding: 2px 6px; border-bottom: 1px solid rgba(0,0,25,.35); white-space: nowrap; }
+.ed-table td.num, .ed-num { text-align: right; font-variant-numeric: tabular-nums; }
+.ed-table tbody tr:hover { background: rgba(255,255,255,.10); }
+.ed-table tbody tr.sel { background: #1d4a6b; box-shadow: inset 2px 0 0 var(--ink-gold); }
+.ed-list { display: flex; flex-direction: column; }
+.ed-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'code fix' 'msg msg';
+  gap: 1px 8px; padding: 3px 6px 4px; font: var(--f-num); text-shadow: none; cursor: pointer;
+  border-bottom: 1px solid rgba(0,0,25,.35); border-left: 3px solid transparent; }
+.ed-row:hover { background: rgba(255,255,255,.10); }
+.ed-row.sel { background: #1d4a6b; }
+.ed-row.err { border-left-color: #e2544a; } .ed-row.warn { border-left-color: #e0b64e; } .ed-row.info { border-left-color: #6f8fd8; }
+.ed-row .code { grid-area: code; color: var(--ink-gold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-row .msg { grid-area: msg; color: var(--ink); white-space: normal; overflow-wrap: anywhere; }
+.ed-row .fix { grid-area: fix; color: var(--ink-blue); border-bottom: 1px dotted currentColor; justify-self: end; }
+.ed-row.err .code { color: #ff9b9b; } .ed-row.info .code { color: var(--ink-dim); }
+/* unskewed sibling of ui.css's .ramp: the HUD's skewX(-30deg) is a fine flourish over a portrait
+   and a menace in a table, where a 30-degree edge no longer lines up with the column rule. */
+.ed-meter { position: relative; height: 9px; min-width: 60px; background: linear-gradient(180deg, #1a2148, #2f3a70);
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(215,225,255,.28), 1px 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.18); }
+.ed-meter > i { position: absolute; inset: 1px; right: auto; display: block; transition: width .18s ease-out;
+  background: linear-gradient(180deg, #dff3c0, #8dc257 55%, #4b7a34); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+.ed-meter.mp > i { background: linear-gradient(180deg, #ffd9b0, #e08a4e 55%, #a04e22); }
+.ed-meter.ct > i { background: linear-gradient(180deg, #fff2a8, #dcb32a 55%, #8a6a10); }
+.ed-meter.bad > i { background: linear-gradient(180deg, #ffb59a, #e0553a 55%, #8a2a18); }
+
+/* ---- layers ---------------------------------------------------------------------------------- */
+.ed-layers { display: flex; flex-direction: column; }
+.ed-layer { display: grid; grid-template-columns: 20px 20px minmax(0, 1fr) auto; gap: 6px; align-items: center; height: 22px;
+  font: var(--f-num); text-shadow: none; padding: 0 4px; }
+.ed-layer:hover { background: rgba(255,255,255,.10); }
+.ed-layer .eye, .ed-layer .lock { cursor: pointer; text-align: center; color: var(--ink-dim); }
+.ed-layer .eye.on { color: var(--ink-gold); } .ed-layer .lock.on { color: var(--ink-red); }
+.ed-layer.off .nm { color: var(--ink-dim); }
+
+/* ---- route-compare scrubber + status bar ---------------------------------------------------- */
+.ed-scrubbar { grid-area: scrub; display: flex; align-items: center; gap: 14px; padding: 0 12px; border-width: 2px 0 0; }
+.ed-status { grid-area: st; display: flex; align-items: center; gap: 0; padding: 0; border-width: 2px 0 0;
+  background: linear-gradient(180deg, #2b3878, #131b42); font: var(--f-num); text-shadow: none; }
+.ed-stat { padding: 0 10px; height: 100%; display: flex; align-items: center; gap: 5px; color: var(--ink-dim);
+  border-right: 1px solid var(--ed-line); box-shadow: 1px 0 0 rgba(255,255,255,.10); white-space: nowrap; }
+.ed-stat b { color: var(--ink); font-weight: 400; font-variant-numeric: tabular-nums; }
+.ed-stat.ok b { color: var(--ink-green); } .ed-stat.warn b { color: var(--ink-gold); } .ed-stat.err b { color: #ff9b9b; }
+
+/* ---- toasts, modal, boot card ---------------------------------------------------------------- */
+.ed-toasts { position: absolute; right: calc(var(--ed-dock) + 16px); bottom: calc(var(--ed-status) + 16px); z-index: 80;
+  display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none; }
+.ed-toast { min-width: 220px; max-width: 380px; padding: 6px 12px; font: var(--f-small); color: var(--ink);
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 4px 5px 0 var(--dsh);
+  animation: ed-toast-in .16s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes ed-toast-in { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+.ed-toast.ok { border-left: 5px solid #8dc257; } .ed-toast.warn { border-left: 5px solid #e0b64e; }
+.ed-toast.err { border-left: 5px solid #e2544a; }
+.ed-scrim { position: absolute; inset: 0; z-index: 90; pointer-events: auto; display: grid; place-items: center;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.42) 0%, rgba(0,0,0,.74) 100%); }
+.ed-modal { min-width: 380px; max-width: 620px; max-height: 74vh; display: flex; flex-direction: column;
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 6px 7px 0 var(--dsh); }
+.ed-modal-head { font: var(--f-big); color: var(--ink-gold); letter-spacing: 1px; text-shadow: 1px 1px 0 #000;
+  padding: 8px 16px; border-bottom: 1px solid var(--edge); box-shadow: 0 1px 0 rgba(255,255,255,.18); }
+.ed-modal-body { padding: 14px 16px; overflow: auto; font: var(--f-small); }
+.ed-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--ed-line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
+
+/* Boot / boot-failure card. editor.html mints this one before any module runs, so it must stand on
+   its own with no JS and no layout: centred over the empty canvas, readable on the first paint. */
+.ed-boot { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 95; max-width: 70vw;
+  padding: 18px 26px; text-align: center; box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 4px 5px 0 var(--dsh); }
+.ed-boot b { display: block; font: var(--f-big); color: var(--ink-gold); letter-spacing: 2px; text-shadow: 1px 1px 0 #000; }
+.ed-boot span { display: block; margin-top: 10px; font: var(--f-num); color: var(--ink-dim); text-shadow: none;
+  white-space: pre-wrap; text-align: left; max-height: 40vh; overflow: auto; }
+.ed-boot.err { border-color: #7a1414; } .ed-boot.err b { color: #ff9b9b; }
+
+/* ---- helpers ---------------------------------------------------------------------------------- */
+.ed-muted { color: var(--ink-dim); } .ed-hint { font: var(--f-num); color: var(--ink-dim); text-shadow: none; }
+.ed-scroll, .ed-panel-body, .ed-drawer-body, .ed-modal-body, .ed-strip { scrollbar-width: thin; scrollbar-color: #5b68a8 var(--ed-void); }
+.ed-scroll::-webkit-scrollbar, .ed-panel-body::-webkit-scrollbar, .ed-drawer-body::-webkit-scrollbar,
+.ed-modal-body::-webkit-scrollbar, .ed-strip::-webkit-scrollbar { width: 10px; height: 10px; }
+.ed-scroll::-webkit-scrollbar-track, .ed-panel-body::-webkit-scrollbar-track, .ed-drawer-body::-webkit-scrollbar-track,
+.ed-modal-body::-webkit-scrollbar-track, .ed-strip::-webkit-scrollbar-track { background: var(--ed-void); }
+.ed-scroll::-webkit-scrollbar-thumb, .ed-panel-body::-webkit-scrollbar-thumb, .ed-drawer-body::-webkit-scrollbar-thumb,
+.ed-modal-body::-webkit-scrollbar-thumb, .ed-strip::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #6d7ec6, #2b3878);
+  border: 1px solid var(--edge); }
+
+/* Narrow windows: the dock is the first thing to go, and #gl follows it because both read the var. */
+@media (max-width: 1180px) { :root { --ed-dock: 264px; --ed-rail: 48px; } }
+@media (max-width: 900px)  { :root { --ed-dock: 0px; } .ed-dock, .ed-drawer { display: none; } }

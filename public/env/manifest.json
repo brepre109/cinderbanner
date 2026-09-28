@@ -1,0 +1,146 @@
+{
+ "barrel.png": {
+  "w": 45,
+  "h": 58,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.6,
+  "decal": false
+ },
+ "bush_a.png": {
+  "w": 118,
+  "h": 67,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.7,
+  "decal": false
+ },
+ "bush_b.png": {
+  "w": 90,
+  "h": 67,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.7,
+  "decal": false
+ },
+ "crate.png": {
+  "w": 58,
+  "h": 62,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.65,
+  "decal": false
+ },
+ "fence_post.png": {
+  "w": 66,
+  "h": 86,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.9,
+  "decal": false
+ },
+ "flower_patch.png": {
+  "w": 82,
+  "h": 53,
+  "anchorX": 0.5,
+  "anchorY": 0.5,
+  "heightTiles": 0.55,
+  "decal": true
+ },
+ "grave_stone.png": {
+  "w": 55,
+  "h": 77,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.8,
+  "decal": false
+ },
+ "hay_bale.png": {
+  "w": 94,
+  "h": 77,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.8,
+  "decal": false
+ },
+ "lamp_post.png": {
+  "w": 70,
+  "h": 250,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 2.0,
+  "decal": false
+ },
+ "rock_large.png": {
+  "w": 105,
+  "h": 115,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 1.2,
+  "decal": false
+ },
+ "rock_small.png": {
+  "w": 47,
+  "h": 48,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 0.5,
+  "decal": false
+ },
+ "signpost.png": {
+  "w": 88,
+  "h": 134,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 1.25,
+  "decal": false
+ },
+ "tree_oak_a.png": {
+  "w": 164,
+  "h": 240,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 2.0,
+  "decal": false
+ },
+ "tree_oak_b.png": {
+  "w": 204,
+  "h": 240,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 2.0,
+  "decal": false
+ },
+ "tree_pine.png": {
+  "w": 127,
+  "h": 288,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 2.8,
+  "decal": false
+ },
+ "well.png": {
+  "w": 112,
+  "h": 154,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 1.45,
+  "decal": false
+ },
+ "tree_pine_b.png": {
+  "w": 112,
+  "h": 252,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 2.8,
+  "decal": false
+ },
+ "tree_palm.png": {
+  "w": 168,
+  "h": 224,
+  "anchorX": 0.5,
+  "anchorY": 1.0,
+  "heightTiles": 2.4,
+  "decal": false
+ }
+}

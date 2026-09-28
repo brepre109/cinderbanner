@@ -1,0 +1,44 @@
+/* Campaign chrome on the battle page: the entry cover card, the pause button and the input shield. */
+.k-overlay { font: var(--f-big); color: var(--ink); -webkit-font-smoothing: none; }
+.k-cover { position: fixed; inset: 0; z-index: 90; background: #000; display: grid; place-items: center; transition: opacity .9s ease-out; pointer-events: none; }
+.k-cover.off { opacity: 0; }
+.k-cover-t { font: var(--f-disp); color: #ffeec0; letter-spacing: 4px; text-transform: uppercase; text-align: center;
+  text-shadow: 2px 0 0 #23150a, -2px 0 0 #23150a, 0 2px 0 #23150a, 0 -2px 0 #23150a, 4px 5px 0 rgba(0,0,0,.85); animation: k-cover-in 1.2s ease-out both; }
+.k-cover-t small { display: block; font: var(--f-small); color: #c9a95a; letter-spacing: 8px; margin-bottom: 14px; }
+.k-cover-t .k-cover-once { display: block; margin-top: 14px; font: var(--f-small); letter-spacing: 3px; text-transform: none; color: #9fd0ff; }
+@keyframes k-cover-in { 0% { opacity: 0; letter-spacing: 14px; } 100% { opacity: 1; letter-spacing: 4px; } }
+.k-pausebtn { position: fixed; right: 14px; top: 12px; z-index: 20; display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 12px; cursor: pointer;
+  font: var(--f-small); color: #f4efdc; background: linear-gradient(180deg, #5a5342, #332e24); border: 2px solid #1a150e;
+  box-shadow: inset 1px 1px 0 #cfc6a8, inset -1px -1px 0 #1d1912, 2px 3px 0 rgba(0,0,0,.6); text-shadow: 1px 1px 0 #000; opacity: .82; }
+.k-pausebtn:hover { opacity: 1; filter: brightness(1.12); }
+.k-pausebtn kbd { font: var(--f-small); line-height: 14px; padding: 0 4px; color: #2a2418; text-shadow: none; background: linear-gradient(180deg, #e9e2c8, #b9b092); border: 1px solid #1a150e; }
+.k-shield { position: fixed; inset: 0; z-index: 40; }
+.k-pause { min-width: 360px !important; }
+/* PLAYTEST r9: the first-turn field manual (non-modal; never takes a key). Left side, below the guide line's band
+   (y<=180) and above the status card (y>=450 at 1100x620). */
+.k-manual { position: fixed; left: 16px; top: 68px; width: 404px; z-index: 25; cursor: pointer; font: var(--f-small); color: var(--ink);
+  -webkit-font-smoothing: none; animation: k-man-in .28s cubic-bezier(.2,.85,.25,1) both; }
+.k-manual.out { animation: k-man-out .24s ease-in both; }
+@keyframes k-man-in { 0% { opacity: 0; transform: translateX(-18px); } 100% { opacity: 1; transform: none; } }
+@keyframes k-man-out { 0% { opacity: 1; } 100% { opacity: 0; transform: translateX(-18px); } }
+.k-man > div { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; line-height: 19px; margin-bottom: 4px; }
+.k-man b { color: #241f18; }
+.k-man .keys { display: block; margin: 7px 0 3px; line-height: 24px; white-space: nowrap; }
+.k-man .keys kbd { font: var(--f-small); display: inline-block; min-width: 18px; padding: 0 4px; margin: 0 3px 0 6px; line-height: 16px; text-align: center; color: #2a2418; text-shadow: none;
+  background: linear-gradient(180deg, #efe8cf, #bdb497); border: 1px solid #1a150e; box-shadow: 1px 1px 0 rgba(0,0,0,.55); }
+.k-man .keys kbd { margin: 0 2px 0 5px; }
+.k-man .keys kbd:first-child { margin-left: 0; } .k-man .keys kbd + kbd { margin-left: 0; }
+.k-man > .k-dim { display: block; text-align: right; margin: 0; }
+.k-sw { display: inline-block; width: 14px; height: 10px; margin: 0 4px 0 0; border: 1px solid #10161c; vertical-align: 1px; }
+.k-sw.mv { background: #4f8fe0; } .k-sw.tg { background: #d8503a; }
+@media (max-width: 800px) { .k-manual { width: calc(100vw - 32px); } }
+@media (min-height: 900px) { .k-manual { top: 88px; } }
+@media (min-width: 1700px) and (min-height: 950px) { .k-manual, .k-pausebtn, .k-overlay .k-win { zoom: 1.5; } .k-manual { top: 60px; } }
+/* the HUD's modal windows (Status, Controls) must cover the field manual; still under the pause shield (40) and dialogs (50) */
+#ui { z-index: 30; }
+
+/* QA r12: below ~1560px the centred guide line (#announce, top 106px, up to 680px wide) ran across the right half of
+   the field manual at the 1100x620 floor, hiding "Move and Act in any order" and the tile key. The plate drops below
+   the guide line there; it still ends above the unit card at 620 high. */
+@media (max-width: 1560px) { .k-manual { top: 176px; } }
+@media (max-width: 1560px) and (max-height: 640px) { .k-manual { top: 170px; } }

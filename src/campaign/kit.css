@@ -1,0 +1,206 @@
+/* Campaign shell chrome. Reuses the battle HUD's palette variables and bitmap faces from src/ui/ui.css (:root
+   --pa/--pb/--pc parchment ramp, --edge* frame stack, --tab* plaque, --f-big/--f-small/--f-disp type) so the
+   title, world map, formation and results windows are the same furniture as the in-battle windows. Classes are
+   prefixed k- so nothing here can leak into the HUD's #ui selectors. Type stays at the faces' integer scales. */
+#shell { position: fixed; inset: 0; overflow: hidden; background: #06070c; color: var(--ink); font: var(--f-big);
+  -webkit-font-smoothing: none; text-rendering: optimizeSpeed; user-select: none; cursor: default; }
+#shell *, .k-overlay *, .k-overlay { box-sizing: border-box; }
+.k-screen { position: absolute; inset: 0; }
+
+/* ---- the window: dithered parchment ramp, layered frame, hard drop shadow (same recipe as .win) ---- */
+.k-win { position: absolute; background-color: var(--pb);
+  background-image: linear-gradient(45deg, var(--dith) 25%, transparent 25% 75%, var(--dith) 75%),
+    linear-gradient(45deg, var(--dith) 25%, transparent 25% 75%, var(--dith) 75%),
+    linear-gradient(180deg, var(--pa) 0%, var(--pb) 55%, var(--pc) 100%);
+  background-size: 4px 4px, 4px 4px, 100% 100%; background-position: 0 0, 2px 2px, 0 0;
+  border: 2px solid var(--edge);
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), inset 0 0 0 2px var(--band), 3px 4px 0 var(--dsh);
+  padding: 8px 14px; color: var(--ink); text-shadow: 1px 1px 0 rgba(255,255,255,.28); animation: k-win-in .2s cubic-bezier(.2,.85,.25,1) both; }
+.k-win.k-titled { padding-top: 22px; }
+.k-win.slate { --pa: #6274bd; --pb: #33418c; --pc: #1b2564; --dith: rgba(6,10,40,.16); --edge: #0b0f2a; --edge-in: #dfe8ff; --edge-in2: #131a4a; --band: #2b3578;
+  --tabA: #3a4690; --tabB: #1a2158; --tab-ink: #eef1ff; --ink: #f3f5ff; --ink-dim: #99a1c6; color: #f3f5ff; text-shadow: 1px 1px 0 #0d1130; }
+@keyframes k-win-in { 0% { opacity: 0; transform: translateY(8px) scale(.97); } 100% { opacity: 1; transform: none; } }
+.k-tab { position: absolute; left: 0; top: 0; padding: 0 9px 0 8px; font: var(--f-small); line-height: 17px; height: 17px; color: var(--tab-ink);
+  background: linear-gradient(180deg, var(--tabA), var(--tabB)); text-shadow: 1px 1px 0 rgba(0,0,0,.8);
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px 0 0 var(--edge-in2), 1px 2px 0 rgba(0,0,0,.55); white-space: nowrap; }
+.k-small { font: var(--f-small); }
+.k-dim { color: var(--ink-dim); }
+.k-gold { color: var(--ink-gold); }
+.k-blue { color: var(--ink-blue); }
+.k-red { color: var(--ink-red); }
+
+/* ---- menus with the glove ---- */
+.k-menu { position: relative; padding-left: 28px; }
+.k-item { position: relative; height: 26px; line-height: 26px; font: var(--f-big); cursor: pointer; white-space: nowrap; padding: 0 8px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.k-menu.small .k-item { font: var(--f-small); height: 23px; line-height: 23px; }
+.k-item .r { font: var(--f-small); color: var(--ink-blue); }
+.k-item.dim { color: var(--ink-dim); text-shadow: 1px 1px 0 rgba(255,255,255,.3); }
+.k-item.dim .r { color: var(--ink-dim); }
+.k-item.sel { color: var(--tab-ink); text-shadow: 1px 1px 0 rgba(0,0,0,.7);
+  background: linear-gradient(180deg, rgba(26,21,13,.38), rgba(26,21,13,.18));
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.45), inset -1px -1px 0 rgba(255,255,255,.3), 0 1px 0 rgba(255,255,255,.16); }
+.k-item.sel.dim { color: #c9c2ad; }
+.k-item.sel .r { color: #bfe2ff; }
+.k-item.sel::before { content: ''; position: absolute; left: -28px; top: 5px; width: 24px; height: 17px; background: var(--k-hand) center / contain no-repeat;
+  image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,.6)); animation: k-hand .5s steps(2, end) infinite; }
+.k-menu.small .k-item.sel::before { top: 3px; }
+@keyframes k-hand { 0% { transform: translateX(0); } 100% { transform: translateX(3px); } }
+.k-item .tick { display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -1px; border: 2px solid var(--edge); background: rgba(0,0,0,.12);
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.35); }
+.k-item .tick.on { background: linear-gradient(180deg, #ffe08a, #c98a1c); box-shadow: inset 1px 1px 0 #fff6cc, inset -1px -1px 0 #7a4a08; }
+
+/* ---- fade & overlays ---- */
+.k-fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 100; }
+.k-fade.on { opacity: 1; pointer-events: auto; }
+.k-hint { position: absolute; font: var(--f-small); color: #d8cfb4; text-shadow: var(--out); white-space: nowrap; pointer-events: none; }
+.k-hint kbd { font: var(--f-small); display: inline-block; min-width: 20px; padding: 0 5px; margin: 0 5px 0 12px; color: #2a2418; text-shadow: none;
+  background: linear-gradient(180deg, #e9e2c8, #b9b092); border: 2px solid #1a150e; box-shadow: 2px 2px 0 rgba(0,0,0,.6); line-height: 16px; text-align: center; }
+.k-hint kbd:first-child { margin-left: 0; }
+
+/* ---- portraits (same frame build as the battle status card) ---- */
+.k-portrait { width: 96px; height: 96px; flex: none; image-rendering: pixelated; background: #3b4a3a center / 100% 100% no-repeat; position: relative;
+  border: 2px solid #1e1a13; box-shadow: inset 0 0 0 1px #58503d, 2px 3px 0 rgba(0,0,0,.6), -1px -1px 0 #efe8cf; }
+.k-portrait.sm { width: 48px; height: 48px; }
+.k-portrait.md { width: 72px; height: 72px; }
+.k-portrait.enemy { background-color: #4a3434; }
+.k-portrait.empty::after { content: attr(data-init); position: absolute; inset: 0; display: grid; place-items: center; font: var(--f-big); color: #cfc6a8; }
+
+/* ---- bars ---- */
+.k-bar { position: relative; height: 10px; background: #1d1912; border: 2px solid #1a150e; box-shadow: inset 0 1px 0 rgba(0,0,0,.5), 1px 1px 0 rgba(255,255,255,.35); overflow: hidden; }
+.k-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(180deg, #ffe89a 0, #f0b640 45%, #b0700c 100%); transition: width .9s cubic-bezier(.3,.7,.2,1); }
+.k-bar.jp i { background: linear-gradient(180deg, #bfe8ff 0, #4aa8f0 45%, #1c5a9c 100%); }
+.k-bar i.gain { background: linear-gradient(180deg, #fffbe0 0, #ffe07a 50%, #e8a020 100%); }
+
+/* ---- big display type ---- */
+.k-disp { font: var(--f-disp); letter-spacing: 3px; color: #ffeec0; text-transform: uppercase;
+  text-shadow: 2px 0 0 #23150a, -2px 0 0 #23150a, 0 2px 0 #23150a, 0 -2px 0 #23150a, 4px 5px 0 rgba(0,0,0,.85); }
+
+/* ---- modal dialog ---- */
+.k-overlay { position: fixed; inset: 0; z-index: 50; background: radial-gradient(ellipse at center, rgba(0,0,0,.35), rgba(0,0,0,.7)); display: grid; place-items: center; }
+.k-overlay .k-win { position: relative; min-width: 320px; max-width: 560px; }
+.k-dialog p { margin: 4px 0 12px; font: var(--f-small); line-height: 22px; white-space: normal; }
+
+/* ---- options (src/campaign/options.js): page list | recessed row trough | slate help plate | key chips + Close ---- */
+.k-options { width: 800px; max-width: calc(100vw - 24px); }
+.k-overlay .k-win.k-options { max-width: calc(100vw - 24px); }
+.k-options .k-body { display: flex; flex-direction: column; gap: 8px; }
+.op-grid { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 0 14px; height: 356px; }
+.op-pages { padding-top: 6px; }
+.op-pages .k-item { height: 34px; line-height: 34px; }
+.op-pages .k-item.sel::before { top: 9px; }
+/* the page being shown while the rows have the glove: a notched plaque, so the reader always knows where they are */
+.op-pages .k-item.cur:not(.sel) { color: var(--ink-gold); text-shadow: 1px 1px 0 rgba(255,251,235,.6); box-shadow: inset 3px 0 0 var(--ink-gold); }
+.op-pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: rgba(40,32,20,.10); border: 1px solid rgba(26,21,13,.55);
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.22), inset -1px -1px 0 rgba(255,255,255,.3), 1px 1px 0 rgba(255,255,255,.25); }
+.op-rows { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 6px 10px 8px 34px; scrollbar-width: none; }
+.op-rows::-webkit-scrollbar { display: none; }
+.op-rows .k-item.op-r { height: 31px; line-height: 31px; font: var(--f-small); align-items: center; }
+.op-rows .k-item.op-r.sel::before { top: 7px; }
+.op-r .l { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.op-r .v { display: flex; align-items: center; gap: 6px; flex: none; }
+.op-r.reset { margin-top: 6px; }
+.op-r.reset .l { color: var(--ink-blue); }
+.op-r.reset.sel .l { color: #bfe2ff; }
+.op-r.changed .l::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 7px; vertical-align: 2px; background: var(--ink-gold); box-shadow: 1px 1px 0 rgba(0,0,0,.45); transform: rotate(45deg); }
+.op-head { margin: 8px 0 3px -24px; width: max-content; padding: 0 8px; line-height: 17px; font: var(--f-small); color: var(--tab-ink);
+  background: linear-gradient(180deg, var(--tabA), var(--tabB)); text-shadow: 1px 1px 0 #000; box-shadow: inset 1px 1px 0 var(--edge-in), 1px 2px 0 rgba(0,0,0,.45); }
+.op-head:first-child { margin-top: 2px; }
+/* values */
+.op-ch { font: var(--f-small); min-width: 132px; text-align: center; }
+.op-r .k-arrows { cursor: pointer; padding: 0 3px; }
+.op-r .k-arrows.off { opacity: .25; }
+.op-pips i { width: 11px; }
+.op-pct { min-width: 44px; }
+.op-tg { display: inline-block; min-width: 50px; height: 22px; line-height: 19px; text-align: center; font: var(--f-small); cursor: pointer; color: #4a4436;
+  border: 2px solid var(--edge); background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.06)); box-shadow: inset 1px 1px 0 rgba(255,255,255,.35), inset -1px -1px 0 rgba(0,0,0,.2); text-shadow: none; }
+.op-tg.on { color: #2a1a04; background: linear-gradient(180deg, #ffe08a, #c98a1c); box-shadow: inset 1px 1px 0 #fff6cc, inset -1px -1px 0 #7a4a08; text-shadow: 1px 1px 0 rgba(255,246,204,.6); }
+.k-item.sel .op-tg:not(.on) { color: #e8e0c8; background: rgba(0,0,0,.28); text-shadow: 1px 1px 0 #000; }
+/* key slots: the HUD's parchment keycaps */
+.op-key { display: inline-block; min-width: 76px; height: 23px; line-height: 20px; padding: 0 6px; text-align: center; font: var(--f-small); cursor: pointer; white-space: nowrap;
+  color: #2a2418; text-shadow: none; background: linear-gradient(180deg, #efe8cf, #bdb497); border: 2px solid #1a150e; box-shadow: 2px 2px 0 rgba(0,0,0,.5); }
+.op-key.none { color: #857d68; background: linear-gradient(180deg, #d6cfb6, #aaa288); }
+.op-key.at { border-color: #f4d35e; box-shadow: 0 0 0 1px #6b5410, 2px 2px 0 rgba(0,0,0,.5); }
+.op-key.cap { color: #2a1a04; background: linear-gradient(180deg, #fff2b8, #e8b040); animation: op-cap .5s steps(2, end) infinite; }
+@keyframes op-cap { 0% { border-color: #1a150e; } 100% { border-color: #fff6cc; } }
+.op-key:hover { filter: brightness(1.08); }
+/* scroll cues (no browser scrollbar anywhere) */
+.op-more { position: absolute; right: 8px; width: 0; height: 0; border: 7px solid transparent; opacity: 0; pointer-events: none; transition: opacity .12s; }
+.op-more.up { top: 4px; border-bottom: 9px solid var(--edge); border-top: 0; }
+.op-more.dn { bottom: 4px; border-top: 9px solid var(--edge); border-bottom: 0; }
+.op-more.on { opacity: .8; animation: op-bob .6s steps(2, end) infinite; }
+@keyframes op-bob { 100% { transform: translateY(2px); } }
+/* palette preview under the Display rows */
+.op-swatch { margin: 10px 0 2px -24px; padding: 6px 10px 4px; border-top: 1px solid rgba(40,32,20,.3); box-shadow: 0 -1px 0 rgba(255,255,255,.3); font: var(--f-small); }
+.op-sw-row { display: flex; align-items: center; gap: 12px; height: 25px; white-space: nowrap; }
+.op-sw-row b { width: 58px; flex: none; color: #5a5342; font-weight: normal; }
+.op-sw { display: inline-flex; align-items: center; gap: 5px; }
+.op-sw i { display: inline-block; width: 18px; height: 13px; border: 2px solid #10161c; box-shadow: 1px 1px 0 rgba(255,255,255,.35); }
+.op-sw.team i { width: 13px; height: 17px; border-radius: 0; }
+/* help plate: the genre's slate message box */
+.op-desc { min-height: 50px; padding: 6px 12px; display: flex; align-items: center; font: var(--f-small); line-height: 20px; color: #eef1ff; text-shadow: 1px 1px 0 #0d1130;
+  background: linear-gradient(180deg, #4a5aa8, #26327a 60%, #1b2564); border: 2px solid #0b0f2a; box-shadow: inset 1px 1px 0 #dfe8ff, inset -1px -1px 0 #131a4a, 2px 3px 0 rgba(0,0,0,.45); }
+.op-desc.bad { color: #ffc0b0; }
+.op-desc.cap { color: #ffe9a8; }
+.op-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; font: var(--f-small); color: #3a3428; }
+.op-keys { white-space: nowrap; }
+.op-keys kbd { font: var(--f-small); display: inline-block; min-width: 20px; padding: 0 5px; margin: 0 3px 0 10px; line-height: 16px; text-align: center; color: #2a2418; text-shadow: none;
+  background: linear-gradient(180deg, #efe8cf, #bdb497); border: 1px solid #1a150e; box-shadow: 1px 1px 0 rgba(0,0,0,.55); }
+.op-keys kbd:first-child, .op-keys kbd + kbd { margin-left: 0; }
+.op-keys kbd + kbd { margin-left: -1px; }
+.op-close { font: var(--f-small); line-height: 19px; padding: 0 14px; cursor: pointer; color: var(--tab-ink); background: linear-gradient(180deg, var(--tabA), var(--tabB));
+  border: 2px solid var(--edge); box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), 2px 2px 0 rgba(0,0,0,.5); text-shadow: 1px 1px 0 #000; }
+.op-close:hover { filter: brightness(1.15); } .op-close:active { transform: translate(1px, 1px); box-shadow: inset 1px 1px 0 var(--edge-in2); }
+.op-close:focus { outline: none; }
+@media (max-height: 700px) { .op-grid { height: 340px; } .op-desc { min-height: 46px; } }
+/* legacy rows other screens may still use */
+.k-optlist .k-item { height: 32px; line-height: 32px; }
+.k-optlist .k-item.sel::before { top: 8px; }
+.k-optlist .v { display: flex; align-items: center; gap: 8px; }
+.k-vol { display: flex; gap: 3px; }
+.k-vol i { display: block; width: 12px; height: 16px; border: 2px solid var(--edge); background: rgba(0,0,0,.18); box-shadow: inset 1px 1px 0 rgba(0,0,0,.3); cursor: pointer; }
+.k-vol i.on { background: linear-gradient(180deg, #bfe2ff, #3d7fd0); box-shadow: inset 1px 1px 0 #eaf6ff, inset -1px -1px 0 #1c3f80; }
+.k-num { font: var(--f-small); min-width: 22px; text-align: right; }
+.k-speed { font: var(--f-small); min-width: 76px; text-align: center; }
+.k-arrows { font: var(--f-small); color: var(--ink-dim); }
+.k-item.sel .k-arrows { color: #ffe08a; }
+
+/* ---- accessibility options applied everywhere (src/ui/prefs.js sets the html data-* attributes and --team-* vars) ----
+   Interface scale: an explicit choice overrides the 1080p auto rule for the modal windows, the pause button and the
+   field manual (the HUD itself is scaled in src/ui/ui.css). --k-modal-zoom is capped so a window always fits. */
+html:not([data-uiscale="auto"]) .k-overlay .k-win, html:not([data-uiscale="auto"]) .k-manual, html:not([data-uiscale="auto"]) .k-pausebtn { zoom: var(--k-modal-zoom, 1) !important; }
+/* Text size: the reading surfaces grow (story, dialogs, field manual, hints); fixed-geometry windows keep their grid. */
+html[data-textsize="large"] .k-dialog p, html[data-textsize="large"] .k-manual .k-man, html[data-textsize="large"] .k-hint, html[data-textsize="large"] .op-desc { zoom: 1.2; }
+html[data-textsize="largest"] .k-dialog p, html[data-textsize="largest"] .k-manual .k-man, html[data-textsize="largest"] .k-hint, html[data-textsize="largest"] .op-desc { zoom: 1.4; }
+/* Team colours: the field manual's swatches (src/campaign/battle.css + inline) follow the palette */
+.k-man .k-sw.mv { background: var(--team-mv, #4f8fe0); } .k-man .k-sw.tg { background: var(--team-tg, #d8503a); }
+.k-man .k-sw[style*="c8485c"] { background: var(--team-th, #c8485c) !important; } .k-man .k-sw[style*="e8904a"] { background: var(--team-st, #e8904a) !important; }
+
+/* PLAYTEST r9: secondary text (enemy class/level, "Destination", "Treasury", briefing lines) used the disabled-item
+   ink (#8e8672 on #b6af93, ~1.6:1) and read as greyed out. Information keeps a quieter ink that still reads (~3.6:1);
+   only disabled menu rows stay faded. */
+.k-win:not(.slate) .k-dim { color: #625b48; }
+.k-win:not(.slate) .k-item.dim, .k-win:not(.slate) .k-item.dim .r { color: var(--ink-dim); }
+
+/* ---- item icons (src/campaign/icons.js): 16px pixel glyphs shown at an integer 2x, never smoothed ---- */
+.k-ico { display: inline-block; flex: none; width: 32px; height: 32px; background: center / 100% 100% no-repeat; image-rendering: pixelated; vertical-align: middle;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,.35)); }
+.k-ico.sm { width: 16px; height: 16px; }
+.k-ico.lg { width: 48px; height: 48px; }
+.k-ico.empty { background: none; filter: none; }
+.k-ico.ghost { opacity: .28; filter: grayscale(1); }
+.k-ico.rare { filter: drop-shadow(0 0 3px rgba(255,214,90,.9)) drop-shadow(1px 1px 0 rgba(0,0,0,.4)); }
+.k-item.sel .k-ico { filter: drop-shadow(1px 1px 0 rgba(0,0,0,.6)); }
+.k-item.sel .k-ico.rare { filter: drop-shadow(0 0 3px rgba(255,214,90,1)) drop-shadow(1px 1px 0 rgba(0,0,0,.6)); }
+.k-ico.ghost { filter: grayscale(1); }
+/* stat deltas: the genre compare colours (green up, red down) in the parchment's ink weights */
+.k-up { color: #1f7a2a; } .k-dn { color: #a3261a; }
+.k-win.slate .k-up { color: #9cff9a; } .k-win.slate .k-dn { color: #ffa08a; }
+
+/* ---- R15 (review15 P8): the Field Manual docks top-right, clear of the unit card, the turn strip and the guide line,
+   and folds to its plaque while a tile field is up (body.k-picking, set by src/ui/ui.js) so it never hides the field. */
+body .k-manual { left: auto; right: 16px; top: 176px; width: 404px; transition: opacity .18s ease-out; }
+body.k-picking .k-manual { opacity: .9; width: 196px; min-height: 0; padding-top: 22px; padding-bottom: 0; }
+body.k-picking .k-manual .k-body { display: none; }
+body.k-picking .k-manual .k-tab::after { content: ' \25B8'; }
+body .k-manual .k-man .keys { flex-wrap: wrap; white-space: normal; row-gap: 2px; }

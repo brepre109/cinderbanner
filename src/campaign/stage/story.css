@@ -1,0 +1,27 @@
+/* Story screen (R15): the location's battle map as the stage, slow pan; the speaker stands tall at the side
+   (full-body sprite, pixel-scaled), the listener dims opposite; the dialogue window below. Chapter card at the end. */
+.st2-bg { position: absolute; inset: -4%; background: #0d0a07 center / cover no-repeat; filter: saturate(.92) brightness(.78); animation: st2-pan 28s ease-in-out infinite alternate; }
+.st2-bg.region { filter: blur(1.5px) saturate(.75) brightness(.7); transform: scale(2.4); animation: none; }
+@keyframes st2-pan { 0% { transform: scale(1.06) translate(-1.5%, .6%); } 100% { transform: scale(1.14) translate(1.8%, -1%); } }
+.st2-shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 38%, rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 100%), linear-gradient(180deg, rgba(0,0,0,.3), rgba(0,0,0,0) 26%, rgba(0,0,0,0) 48%, rgba(0,0,0,.72) 100%); }
+.st2-fig { position: absolute; bottom: 170px; height: min(46vh, 330px); width: auto; image-rendering: pixelated; filter: drop-shadow(3px 4px 0 rgba(0,0,0,.6)); transition: transform .45s cubic-bezier(.2,.85,.25,1), opacity .45s, filter .45s; opacity: 0; pointer-events: none; }
+.st2-fig.l { left: 6%; transform: translateX(-40px); } .st2-fig.r { right: 6%; transform: translateX(40px) scaleX(-1); }
+.st2-fig.in.l { transform: none; opacity: 1; } .st2-fig.in.r { transform: scaleX(-1); opacity: 1; }
+.st2-fig.dim { filter: brightness(.45) saturate(.6) drop-shadow(3px 4px 0 rgba(0,0,0,.6)); }
+.st2-fig.talk.l { animation: st2-talk-l .5s ease-out; } .st2-fig.talk.r { animation: st2-talk-r .5s ease-out; }
+@keyframes st2-talk-l { 30% { transform: translateY(-8px); } } @keyframes st2-talk-r { 30% { transform: translateY(-8px) scaleX(-1); } }
+.st2-card-end { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4,4,8,.72); animation: st2-fade .8s ease-out both; }
+@keyframes st2-fade { 0% { opacity: 0; } 100% { opacity: 1; } }
+.st2-end { text-align: center; }
+.st2-end .ttl { font: var(--f-disp); color: #ffeec0; letter-spacing: 6px; text-transform: uppercase; animation: st2-ttl 1.6s ease-out both;
+  text-shadow: 2px 0 0 #23150a, -2px 0 0 #23150a, 0 2px 0 #23150a, 0 -2px 0 #23150a, 4px 5px 0 rgba(0,0,0,.85); }
+.st2-end .ttl small { display: block; font: var(--f-small); color: #c9a95a; letter-spacing: 8px; margin-bottom: 12px; }
+@keyframes st2-ttl { 0% { opacity: 0; letter-spacing: 18px; } 100% { opacity: 1; letter-spacing: 6px; } }
+.st2-line { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin: 26px auto 18px; min-height: 96px; }
+.st2-line img { height: 88px; image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(0,0,0,.7)); animation: st2-march .5s ease-out both; }
+@keyframes st2-march { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: none; } }
+.st2-stats { position: relative !important; display: inline-grid; grid-template-columns: repeat(3, minmax(150px, auto)); gap: 6px 26px; padding: 14px 24px !important; text-align: left; animation-delay: .9s; }
+.st2-stats div { font: var(--f-small); line-height: 20px; white-space: nowrap; } .st2-stats b { display: block; font: var(--f-big); color: #241f18; }
+.st2-next { margin-top: 18px; font: var(--f-small); color: #d8cfb4; text-shadow: 1px 1px 0 #000; animation: st2-fade 1s 1.6s both; }
+.st2-next kbd { font: var(--f-small); padding: 0 5px; margin: 0 6px; color: #2a2418; background: linear-gradient(180deg, #efe8cf, #bdb497); border: 1px solid #1a150e; }
+@media (max-width: 800px) { .st2-fig { height: 30vh; bottom: 190px; } .st2-stats { grid-template-columns: repeat(2, auto); } }

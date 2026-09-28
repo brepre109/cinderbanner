@@ -1,0 +1,24 @@
+{
+  "name": "cinderbanner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An isometric tactical RPG in the browser, built with Three.js: charge-time battles, a job system and a two-chapter campaign.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5190",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5191",
+    "test": "node tools/mapcheck.mjs && node src/game/rewindtest.mjs n=8 && node src/game/sim.mjs n=4 seed=1",
+    "mapcheck": "node tools/mapcheck.mjs",
+    "sim": "node src/game/sim.mjs",
+    "shot": "node tools/shot.mjs"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1",
+    "vite": "^6.4.3"
+  }
+}

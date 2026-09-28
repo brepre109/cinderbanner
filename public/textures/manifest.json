@@ -1,0 +1,72 @@
+{
+  "grass_top.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#6d8c51"
+  },
+  "grass_dark_top.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#2b4427"
+  },
+  "dirt_top.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#cb9044"
+  },
+  "sand_top.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#f2d68c"
+  },
+  "cobble_top.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#4a6270"
+  },
+  "stone_block_side.png": {
+    "tile": true,
+    "role": "side",
+    "avgColor": "#4d6879"
+  },
+  "rock_cliff_side.png": {
+    "tile": true,
+    "role": "side",
+    "avgColor": "#866449"
+  },
+  "earth_cliff_side.png": {
+    "tile": true,
+    "role": "side",
+    "avgColor": "#5e361e"
+  },
+  "wood_plank_top.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#76330f"
+  },
+  "wood_plank_side.png": {
+    "tile": true,
+    "role": "side",
+    "avgColor": "#6a4627"
+  },
+  "roof_tile.png": {
+    "tile": true,
+    "role": "side",
+    "avgColor": "#78493c"
+  },
+  "plaster_wall.png": {
+    "tile": true,
+    "role": "side",
+    "avgColor": "#b8a78c"
+  },
+  "water.png": {
+    "tile": true,
+    "role": "water",
+    "avgColor": "#008fd4"
+  },
+  "bridge_plank.png": {
+    "tile": true,
+    "role": "top",
+    "avgColor": "#7d4321"
+  }
+}

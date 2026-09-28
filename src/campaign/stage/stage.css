@@ -1,0 +1,106 @@
+/* Story staging on the battle map (src/campaign/stage): letterbox, speech windows anchored to the speaker, emote
+   bubbles, boss nameplate, recruit banner, flashes, the boss mechanic plate and the finale title card. Prefix sg-. */
+.sg-root { position: fixed; inset: 0; z-index: 35; pointer-events: none; font: var(--f-big); color: var(--ink); -webkit-font-smoothing: none; }
+.sg-root * { box-sizing: border-box; }
+.sg-catch { position: fixed; inset: 0; z-index: 34; pointer-events: auto; cursor: pointer; }
+.sg-bar { position: fixed; left: 0; right: 0; height: 9vh; background: #000; z-index: 36; transition: transform .45s cubic-bezier(.3,.8,.3,1); pointer-events: none; }
+.sg-bar.t { top: 0; transform: translateY(-100%); } .sg-bar.b { bottom: 0; transform: translateY(100%); }
+.sg-bars-on .sg-bar { transform: none; }
+body.sg-scene #ui { opacity: 0; transition: opacity .3s; pointer-events: none; }
+body.sg-scene .k-pausebtn, body.sg-scene .sg-hint { opacity: 0 !important; pointer-events: none; }
+/* R20 (review19 RG2): an in-battle line owns the picture: no stale Effect / unit card, no command window or guide line under it */
+body.sg-barking #ui #forecast, body.sg-barking #ui #unit-card, body.sg-barking #ui #menu, body.sg-barking #ui #help { opacity: 0 !important; visibility: hidden; transition: opacity .15s; }
+
+/* speech window: the campaign parchment window, portrait left, name plaque, a tail to the speaker */
+.sg-say { position: fixed !important; width: min(560px, calc(100vw - 24px)); min-height: 108px; padding: 24px 18px 14px 112px !important; z-index: 37; }
+.sg-say .k-portrait { position: absolute; left: 12px; top: 16px; width: 84px; height: 84px; box-shadow: 0 0 0 2px #1a150e, 2px 3px 0 rgba(0,0,0,.5); }
+.sg-say.noface { padding-left: 18px !important; min-height: 80px; }
+.sg-say .k-tab { font: var(--f-small); }
+.sg-say.foe .k-tab { color: #ffc4b4; background: linear-gradient(180deg, #8a3a30, #4a1a16); }
+.sg-txt { font: var(--f-big); line-height: 28px; white-space: normal; color: #221d15; min-height: 56px; }
+.sg-more { position: absolute; right: 14px; bottom: 9px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #3a2a10; opacity: 0; }
+.sg-say.done .sg-more { opacity: 1; animation: sg-blink .8s steps(2, end) infinite; }
+@keyframes sg-blink { 0% { transform: translateY(0); } 100% { transform: translateY(3px); } }
+/* tail: a two-layer triangle (frame + parchment) on the edge that faces the speaker */
+.sg-tail { position: absolute; width: 0; height: 0; left: var(--tx, 40px); margin-left: -11px; }
+.sg-say.above .sg-tail { bottom: -14px; border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 13px solid var(--edge); }
+.sg-say.above .sg-tail::after { content: ''; position: absolute; left: -8px; top: -15px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 10px solid var(--pc); }
+.sg-say.below .sg-tail { top: -14px; border-left: 11px solid transparent; border-right: 11px solid transparent; border-bottom: 13px solid var(--edge); }
+.sg-say.below .sg-tail::after { content: ''; position: absolute; left: -8px; top: 4px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 10px solid var(--pa); }
+.sg-say.free .sg-tail { display: none; }
+.sg-say.bark { min-height: 92px; }
+.sg-narr { position: fixed !important; left: 0; right: 0; margin: 0 auto; top: calc(9vh + 18px); width: min(760px, calc(100vw - 32px)); padding: 16px 30px !important; text-align: center; z-index: 37; }
+.sg-narr .sg-txt { color: #eef1ff; min-height: 0; }
+.sg-narr .sg-more { border-top-color: #dfe8ff; }
+.sg-narr.done .sg-more { opacity: 1; animation: sg-blink .8s steps(2, end) infinite; }
+
+/* emote bubble over a head */
+.sg-emote { position: fixed; z-index: 38; width: 38px; height: 34px; margin: -40px 0 0 -8px; display: grid; place-items: center; font: var(--f-big); font-weight: bold; color: #1a150e;
+  background: #fbf7ea; border: 2px solid #1a150e; border-radius: 11px; box-shadow: 2px 3px 0 rgba(0,0,0,.55); animation: sg-pop .32s cubic-bezier(.2,1.6,.4,1) both; }
+.sg-emote::after { content: ''; position: absolute; left: 8px; bottom: -9px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid #1a150e; }
+.sg-emote.bang { color: #c8281c; } .sg-emote.q { color: #2a4aa8; }
+.sg-emote.out { animation: sg-unpop .2s ease-in both; }
+.sg-emote svg { width: 24px; height: 24px; }
+@keyframes sg-pop { 0% { transform: scale(.2) translateY(14px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes sg-unpop { 100% { transform: scale(.4); opacity: 0; } }
+
+/* boss nameplate: a slab across the left third that slams in */
+.sg-plate { position: fixed; left: 0; bottom: calc(9vh + 22px); z-index: 38; padding: 10px 60px 14px 34px; min-width: 420px;
+  background: linear-gradient(90deg, rgba(40,6,6,.94) 0%, rgba(78,14,12,.9) 62%, rgba(78,14,12,0) 100%);
+  border-top: 2px solid #e8b860; border-bottom: 2px solid #e8b860; box-shadow: 0 4px 0 rgba(0,0,0,.5);
+  animation: sg-plate-in .5s cubic-bezier(.15,1.3,.35,1) both; }
+.sg-plate small { display: block; font: var(--f-small); color: #f0cf88; letter-spacing: 5px; text-transform: uppercase; text-shadow: 1px 1px 0 #000; }
+.sg-plate b { display: block; font: var(--f-disp); color: #fff2d4; letter-spacing: 4px; text-transform: uppercase; margin-top: 2px;
+  text-shadow: 2px 0 0 #3a0a06, -2px 0 0 #3a0a06, 0 2px 0 #3a0a06, 0 -2px 0 #3a0a06, 4px 5px 0 rgba(0,0,0,.85); }
+.sg-plate.out { animation: sg-plate-out .35s ease-in both; }
+@keyframes sg-plate-in { 0% { transform: translateX(-110%) skewX(-8deg); } 70% { transform: translateX(3%); } 100% { transform: none; } }
+@keyframes sg-plate-out { 100% { transform: translateX(-110%); opacity: 0; } }
+.sg-plate b { animation: sg-slam .55s cubic-bezier(.2,1.4,.4,1) .12s both; }
+/* R18: docked for the line after the slam -- a compact plate in the top-left corner (under the letterbox in a scene) */
+.sg-plate.dock { bottom: auto; top: 8px; min-width: 0; padding: 5px 44px 7px 18px; animation: sg-plate-dock .38s cubic-bezier(.2,.9,.3,1) both; }
+.sg-plate.dock.lb { top: calc(9vh + 8px); }
+.sg-plate.dock small { letter-spacing: 3px; }
+.sg-plate.dock b { font: var(--f-big); letter-spacing: 3px; margin-top: 0; animation: none; text-shadow: 2px 0 0 #3a0a06, -2px 0 0 #3a0a06, 0 2px 0 #3a0a06, 0 -2px 0 #3a0a06, 2px 3px 0 rgba(0,0,0,.85); }
+.sg-plate.dock.out { animation: sg-plate-out .35s ease-in both; }
+@keyframes sg-plate-dock { 0% { opacity: 0; transform: translateX(-40%); } 100% { opacity: 1; transform: none; } }
+@keyframes sg-slam { 0% { transform: scale(1.8); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* recruit banner */
+.sg-join { position: fixed !important; left: 0; right: 0; margin: 0 auto; width: max-content; top: 34%; z-index: 38; display: flex; align-items: center; gap: 16px; padding: 12px 28px 12px 14px !important; animation: sg-join-in .45s cubic-bezier(.2,1.3,.4,1) both; }
+.sg-join .k-portrait { width: 72px; height: 72px; box-shadow: 0 0 0 2px #1a150e; }
+.sg-join .t { font: var(--f-disp); letter-spacing: 3px; color: #ffeec0; text-transform: uppercase; text-shadow: 2px 0 0 #23150a, -2px 0 0 #23150a, 0 2px 0 #23150a, 0 -2px 0 #23150a, 3px 4px 0 rgba(0,0,0,.8); }
+.sg-join small { display: block; font: var(--f-small); color: #e3c47a; letter-spacing: 4px; text-transform: uppercase; text-shadow: 1px 1px 0 #000; }
+.sg-join.out { animation: sg-unpop .3s ease-in both; }
+@keyframes sg-join-in { 0% { transform: scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+.sg-flash { position: fixed; inset: 0; z-index: 36; pointer-events: none; mix-blend-mode: screen; animation: sg-flash .7s ease-out both; }
+@keyframes sg-flash { 0% { opacity: .75; } 100% { opacity: 0; } }
+html[data-flash="off"] .sg-flash { display: none; }
+html[data-flash="reduced"] .sg-flash { animation-name: sg-flash-soft; }
+@keyframes sg-flash-soft { 0% { opacity: .25; } 100% { opacity: 0; } }
+.sg-black { position: fixed; inset: 0; z-index: 39; background: #000; opacity: 0; transition: opacity .45s; pointer-events: none; }
+.sg-black.on { opacity: 1; }
+
+/* finale title card over black */
+.sg-card { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; text-align: center; pointer-events: none; }
+.sg-card div { font: var(--f-disp); color: #ffeec0; letter-spacing: 6px; text-transform: uppercase; animation: sg-card-in 1.6s ease-out both;
+  text-shadow: 2px 0 0 #23150a, -2px 0 0 #23150a, 0 2px 0 #23150a, 0 -2px 0 #23150a, 4px 5px 0 rgba(0,0,0,.85); }
+.sg-card small { display: block; font: var(--f-small); color: #c9a95a; letter-spacing: 8px; margin-bottom: 16px; }
+@keyframes sg-card-in { 0% { opacity: 0; letter-spacing: 16px; } 100% { opacity: 1; letter-spacing: 6px; } }
+
+.sg-hint-row { position: fixed; right: 22px; bottom: calc(9vh + 10px); z-index: 38; font: var(--f-small); color: #d8cfb4; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+.sg-hint-row kbd { font: var(--f-small); display: inline-block; min-width: 20px; padding: 0 5px; margin: 0 5px 0 12px; color: #2a2418; text-shadow: none; line-height: 16px;
+  background: linear-gradient(180deg, #efe8cf, #bdb497); border: 1px solid #1a150e; box-shadow: 1px 1px 0 rgba(0,0,0,.55); }
+
+/* the boss mechanic plate under the Win line (and on the Conditions banner) */
+.sg-hint { position: fixed; left: 16px; top: 60px; z-index: 24; max-width: min(300px, calc(100vw - 32px)); padding: 4px 12px 4px 8px; display: flex; gap: 8px; align-items: center;
+  font: var(--f-small); color: #fff0d8; background: linear-gradient(180deg, rgba(92,24,20,.92), rgba(52,10,10,.92)); border: 2px solid #1a0806;
+  box-shadow: inset 1px 1px 0 #d88a70, 2px 3px 0 rgba(0,0,0,.55); text-shadow: 1px 1px 0 #000; transition: opacity .3s; pointer-events: none; }
+.sg-hint .lab { color: #2a0c08; background: linear-gradient(180deg, #f2c878, #c08a3a); padding: 0 6px; line-height: 17px; text-shadow: none; flex: none; }
+.sg-hint span:last-child { white-space: normal; line-height: 17px; }
+.sg-hint.pulse { animation: sg-hint-pulse 1.2s ease-out 2; }
+@keyframes sg-hint-pulse { 0%, 100% { filter: none; } 30% { filter: brightness(1.7); transform: translateX(4px); } }
+.sg-bhint { font: var(--f-small); color: #7a1c14; margin-top: 6px; max-width: 460px; white-space: normal; }
+@media (min-width: 1700px) and (min-height: 950px) { .sg-plate, .sg-join, .sg-hint, .sg-hint-row { zoom: 1.4; } .sg-say { width: 700px; } }
+html[data-textsize="large"] .sg-txt { font-size: 26px; line-height: 32px; }
+html[data-textsize="largest"] .sg-txt { font-size: 30px; line-height: 36px; }

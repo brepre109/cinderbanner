@@ -1,0 +1,458 @@
+/* Cinderbanner — battle HUD in the PS1 tactics idiom.
+   Layout follows the real game:
+     · bottom-LEFT   framed status card — portrait + name/job + Lv/Mv + Hp/Mp/Ct ramps + status icons
+                     in ONE dense window.
+     · bottom-RIGHT  target/forecast readout on a dark framed plate while aiming,
+                     right-anchored at 16px, flush to the bottom edge (height law: top >= y450).
+     · right rail    command / ability window, anchored to the bottom-right corner.
+     · top-CENTRE    turn-order strip with the ability announce 11px below it (hint bar dev-only: ?hud=debug).
+     · top-RIGHT     deliberately EMPTY (see the note where the clock block used to be).
+   Windows: dithered vertical gradient interior, layered frame (2px dark keyline, 1px light top/left
+   bevel, 1px dark bottom/right bevel, 1px mid band), hard 3px/4px offset drop shadow, dark title
+   plaque with pale text that interrupts the top frame.
+   Type: "Cinder Pixel" (bundled bitmap-style bold serif, see public/fonts/README.md) at integer scales only
+   (9→18/27, 12→24/36, 13→26/39) so the bitmap grid never lands between pixels. */
+@font-face { font-family: 'Cinder Pixel'; src: url('/fonts/cinder-12.ttf') format('truetype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Cinder Small'; src: url('/fonts/cinder-9.ttf') format('truetype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Cinder Display'; src: url('/fonts/cinder-13.ttf') format('truetype'); font-weight: 700; font-display: block; }
+
+/* ROUND-5 CRAFT PASS, measured off the references at 2x nearest:
+   - the genre's interior is a SHALLOW muted khaki ramp (top ~#B5B19A -> bottom ~#9A977B), not a pale
+     cream sheet; the tonal change is carried by a low-contrast 2px checker DITHER, not a smooth
+     modern gradient (ref06_menu / ref06_namecard reads).
+   - The frame is layered: 1px dark keyline (border), 1px light top/left bevel, 1px dark bottom/right
+     bevel, 1px mid band between them (~4px total), then a HARD opaque drop shadow ~3-4px down/right.
+   - Window type: dark charcoal face with a 1px hard MID-TAUPE down/right shadow (#777161 in ref06),
+     not a translucent white glow. */
+/* ROUND-6 value step (Integration): the cream chrome measured near-255 luma in auto_close and
+   out-brightened the combat focal unit. The whole parchment ramp drops one step — top 230 -> 210,
+   mid 201 -> 182, bottom now lands on ref06's own quoted #9A977B — so the windows read as mid-khaki
+   furniture and the unit/VFX own the top of the hierarchy. */
+:root {
+  --pa: #d2ccb0; --pb: #b6af93; --pc: #9a977b;          /* parchment: top / middle / bottom */
+  --dith: rgba(58,50,32,.10);                             /* interior checker dither (2px squares) */
+  --edge: #2b251c; --edge-in: #fbf6e2; --edge-in2: #57503e; --band: #8d866d;
+  --tabA: #5a5342; --tabB: #332e24; --tab-ink: #f4efdc;
+  --ink: #302b24; --ink-hi: #6f6857; --ink-dim: #8e8672; --ink-gold: #5c3a06; --ink-blue: #2d3f8a; --ink-red: #8a2222;
+  --dsh: rgba(0,0,0,.72);
+  --f-big: 24px/1.15 'Cinder Pixel', 'DejaVu Serif', Georgia, serif;
+  --f-small: 18px/1.1 'Cinder Small', 'DejaVu Serif', Georgia, serif;
+  --f-disp: 39px/1 'Cinder Display', 'DejaVu Serif', Georgia, serif;
+  /* hard 1px outline used by every piece of type that sits directly on the battlefield */
+  --out: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 rgba(0,0,0,.55);
+}
+#ui.slate { --pa: #6274bd; --pb: #33418c; --pc: #1b2564; --dith: rgba(6,10,40,.16);
+  --edge: #0b0f2a; --edge-in: #dfe8ff; --edge-in2: #131a4a; --band: #2b3578;
+  --tabA: #3a4690; --tabB: #1a2158; --tab-ink: #eef1ff;
+  --ink: #f3f5ff; --ink-hi: #0d1130; --ink-dim: #99a1c6; --ink-gold: #ffe08a; --ink-blue: #9fd8ff; --ink-red: #ff9b9b; }
+
+html, body { margin: 0; height: 100%; background: #06070c; overflow: hidden; }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#ui { position: fixed; inset: 0; pointer-events: none; color: var(--ink); font: var(--f-big); text-shadow: 1px 1px 0 var(--ink-hi); -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed; user-select: none; }
+#ui * { box-sizing: border-box; }
+
+/* ---- window chrome ---- */
+.win { position: absolute;
+  background-color: var(--pb);
+  /* interior: shallow ramp under a 2px checker dither (the two 45deg layers make a 2px checker at a 4px tile) */
+  background-image:
+    linear-gradient(45deg, var(--dith) 25%, transparent 25% 75%, var(--dith) 75%),
+    linear-gradient(45deg, var(--dith) 25%, transparent 25% 75%, var(--dith) 75%),
+    linear-gradient(180deg, var(--pa) 0%, var(--pb) 55%, var(--pc) 100%);
+  background-size: 4px 4px, 4px 4px, 100% 100%;
+  background-position: 0 0, 2px 2px, 0 0;
+  border: 2px solid var(--edge);
+  /* frame stack, outermost first: dark keyline (border) | 1px light TL bevel | 1px dark BR bevel |
+     1px mid band | HARD down-right drop shadow — the ref06 layer recipe at native px */
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), inset 0 0 0 2px var(--band), 3px 4px 0 var(--dsh);
+  padding: 8px 14px; pointer-events: auto;
+  opacity: 0; visibility: hidden; transform: translateY(6px); transition: opacity .16s ease-out, transform .16s cubic-bezier(.2,.8,.2,1), visibility 0s linear .16s; }
+.win.show { opacity: 1; visibility: visible; transform: none; transition: transform .16s cubic-bezier(.2,.8,.2,1); } /* appears at once (no opacity ramp) so a slow frame never shows an empty slot; eases into place */
+.win.dim { filter: saturate(.25) brightness(.72) contrast(.9); }
+/* ROUND-6 plaque redesign (finding 4): round-5's tab rose ABOVE the top border with its own keyline,
+   which read as a fieldset/legend interrupt ('Order'/'Menu'/'Ally' flagged). The plaque now sits
+   INSIDE the frame at the top-left: the window's keyline runs unbroken across the whole top edge,
+   the plaque's own inset 1px light top bevel continues the window's bevel band into the title, and
+   its dark face reads as a thickened segment of the frame stack — title integrated INTO the band,
+   not hanging off it. Windows that carry a plaque reserve 17px of top padding for it. */
+.tab { position: absolute; left: 0; top: 0; padding: 0 8px 0 7px; font: var(--f-small); white-space: nowrap;
+  color: var(--tab-ink); background: linear-gradient(180deg, var(--tabA), var(--tabB));
+  line-height: 17px; height: 17px; border: none;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.8);
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px 0 0 var(--edge-in2), 1px 2px 0 rgba(0,0,0,.55); }
+.tab.enemy { color: var(--team-bTab, #ffa898); }
+/* ---- bottom band: ONE dense framed status window — the references -------------------------
+   ROUND-6 (finding 3, 'STATUS INFO SPLIT'): the round-5 bottom-left was a CHROMELESS portrait+gauges
+   block on a radial scrim (the block whose box edges round-4/5 spent three cycles proving seam-free —
+   the whole scrim apparatus goes with it: an unframed HUD over busy terrain was the finding itself),
+   while name/job/stats sat in a separate framed card bottom-right with no portrait and no gauges.
+   the genre ref06 puts portrait + gauges + Lv/Exp + Resolve inside one dense khaki window; #unit-card
+   is now that window and #name-card is deleted. Geometry law (camera.js ink band, keep-out y>=450 at
+   1100x620): top = 620 - bottom - height must stay >= 450, so every row is height-pinned below. */
+#unit-card { left: 16px; bottom: 10px; width: 474px; display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 0 12px;
+  align-items: start; padding: 17px 12px 7px; }
+#unit-card .info { min-width: 0; }
+/* name row: faction crest (round-6: replaces the radio-button disc) + squad number + name */
+#unit-card .nm { display: flex; align-items: center; gap: 7px; height: 24px; }
+#unit-card .nm .crest { width: 12px; height: 12px; image-rendering: pixelated; background-size: 100% 100%; flex: none;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,.45)); }
+#unit-card .nm .no { font: var(--f-small); color: #5a5342; }
+#unit-card .nm .no .sep { margin: 0 1px; }
+#unit-card .nm .no + b { margin-left: 1px; }
+#unit-card .nm b { font: var(--f-big); line-height: 24px; color: #241f18; letter-spacing: 1px; }
+/* job row: class left, Lv/Mv/Jp right (or the charging swap — pinned height, never grows the window) */
+#unit-card .job { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; height: 19px;
+  font: var(--f-small); line-height: 19px; white-space: nowrap; }
+#unit-card .job .jn { color: #4a4436; }
+#unit-card .job .top { font: var(--f-small); color: #3a3428; }
+#unit-card .job .top em { font-style: normal; font-weight: 700; color: #241f18; }
+#unit-card .job .top.charging { color: #7a4a08; }
+/* stats row (from the deleted name-card): one indented axis, live-ink values, status icons ride right */
+#unit-card .bf { display: flex; align-items: center; gap: 8px; height: 19px; margin-top: 1px; font: var(--f-small);
+  line-height: 19px; white-space: nowrap; color: #3a3428; }
+#unit-card .bf b { color: #241f18; }
+#unit-card .bf .statuses { display: flex; gap: 4px; height: 18px; align-items: center; margin: 0 0 0 auto; }
+#unit-card .bf .statuses:empty { display: none; }
+/* ref06_unitcard portrait frame at 2x: pale top/left rail, mid taupe band, dark recessed lip inside,
+   hard extrusion down/right — five layers, not a single white stroke. */
+/* ROUND-5B: the head-crop fills 100% of the box, so sprites with wide silhouettes touched the frame
+   and narrow ones floated — 'padding inconsistent across cells' in the strip review. A uniform 4px
+   inset (84px art centred in the 92px box) gives every portrait the same breathing room; the margin
+   falls back to the team plate colour while a crop loads. */
+.portrait { width: 92px; height: 92px; border: 2px solid #efe7cf; outline: 2px solid #1b1610; background: linear-gradient(180deg, #6b7590, #2c3247 70%, #1a1d2c);
+  background-size: 84px 84px; background-position: center; background-repeat: no-repeat; image-rendering: auto; position: relative;
+  box-shadow: 3px 4px 0 rgba(0,0,0,.55), inset 0 0 0 2px #6f6857, inset 0 0 0 3px #241f17; }
+.portrait::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 -14px 12px -10px rgba(0,0,0,.55), inset 1px 1px 0 rgba(255,255,255,.25); }
+.portrait.A { background-color: var(--team-aPlate, #33406e); } .portrait.B { background-color: var(--team-bPlate, #5f2b2b); }
+.portrait, #turn-order .slot .pic { filter: brightness(1.14) saturate(1.06) contrast(1.04); }
+/* placeholder while a portrait crop is still being built (or cannot be built): the unit's initial on a team plate */
+.portrait.empty::before, #turn-order .slot .pic.empty::before { content: attr(data-init); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: var(--f-disp); color: rgba(255,255,255,.34); text-shadow: 1px 1px 0 rgba(0,0,0,.6); }
+#turn-order .slot .pic.empty::before { font: var(--f-big); }
+/* Hp / Mp / Ct ramp rows inside the window: dark ink labels (the forecast mirror keeps the white
+   battlefield scheme via the unsuffixed .srow rules below). Height 22 pins the window's keep-out:
+   three rows must fit the y>=450 ink band with the name and job rows. */
+#unit-card .srow { height: 22px; }
+#unit-card .srow .lab { color: #241f18; text-shadow: none; letter-spacing: 1px; }
+#unit-card .srow .num { color: #241f18; line-height: 20px; }
+#unit-card .srow .num small { color: #4a4436; }
+#unit-card .srow .num small::before { color: #7d765f; }
+
+/* Hp / Mp / Ct ramp rows. the genre prints the current value large and the max smaller, dropped half a line. */
+.srow { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; height: 24px; font: var(--f-small); }
+.srow .lab { color: #fff; letter-spacing: 1px; }
+.srow .num { text-align: right; font: var(--f-big); font-variant-numeric: tabular-nums; white-space: nowrap; position: relative; padding-left: 4px; padding-right: 42px; }
+.srow .num small { position: absolute; right: 0; bottom: -6px; font: var(--f-small); color: #efe9d8; }
+.srow .num small::before { content: '/'; color: #cfc8b4; }
+/* ref06 gauges: a RECESSED parallelogram trough (dark top inner edge, light bottom inner edge) with a
+   hard three-band fill (2px pale highlight / body / 2px dark base) — banded, never a smooth ramp.
+   ROUND-5B: height 9 -> 12. Measured off ref06 at native scale the gauge is ~2.3% of frame height;
+   9px/620 was 1.45% and the mid-shot review called the full HP bar 'almost empty, hard to distinguish
+   from the trough'. 12px/620 = 1.94%, inside the ref band. The band stops are %-based, so they scale. */
+.ramp { position: relative; height: 12px; background: linear-gradient(180deg, #3e3a30, #605a49); transform: skewX(-30deg);
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(240,236,220,.30), 1px 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.20); }
+.ramp > i { position: absolute; inset: 1px; right: auto; display: block; transition: width .32s ease-out; }
+.ramp.hp > i { background: linear-gradient(180deg, #e6f6cc 0 2px, #8dc257 2px calc(100% - 2px), #46752f calc(100% - 2px)); }
+.ramp.mp > i { background: linear-gradient(180deg, #ffdfba 0 2px, #e08a4e 2px calc(100% - 2px), #94461e calc(100% - 2px)); }
+.ramp.ct > i { background: linear-gradient(180deg, #fff5b8 0 2px, #dcb32a 2px calc(100% - 2px), #7e600e calc(100% - 2px)); }
+.ramp.hp.low > i { background: linear-gradient(180deg, #ffc7b0 0 2px, #e0553a 2px calc(100% - 2px), #7f2616 calc(100% - 2px)); }
+.sticon { display: inline-block; width: 18px; height: 18px; image-rendering: pixelated; background-size: 100% 100%; filter: drop-shadow(1px 1px 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 -1px 0 #000); }
+
+/* ---- command / ability window: right rail above the bottom-right corner ----------
+   ROUND-6 (finding 4): the name-card it used to stack on is deleted (merged bottom-left), so the
+   command window anchors to the bottom-right corner inside camera.js's ink band. Width is fit-driven
+/*   by 'Auto-battle' at 18px (min-width 132): measured ~140-155 vs round-5's 200 — the 'huge empty
+   right half' (min-width padding nothing filled) is gone. Top padding 19 reserves the in-frame
+   plaque; rows are 18px type on 24px lines; the selected row carries a RECESSED trough bar
+   (dark fill, dark top inset, light bottom inset) under pale ink, with the glove pointer in the
+   left gutter — ref06's selection idiom. */
+#menu { right: 20px; bottom: 20px; min-width: 132px; padding: 19px 8px 7px 29px; transform-origin: 100% 100%; }
+#menu.show { animation: menu-in .17s cubic-bezier(.2,.85,.25,1) both; }
+@keyframes menu-in { 0% { opacity: 1; transform: translate(12px, 8px) scale(.93); } 100% { opacity: 1; transform: none; } }
+#menu .item { position: relative; height: 24px; line-height: 24px; font: var(--f-small); cursor: pointer; white-space: nowrap;
+  padding: 0 4px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+#menu .item .mp { font: var(--f-small); color: var(--ink-blue); }
+#menu .item.dim { color: var(--ink-dim); text-shadow: 1px 1px 0 rgba(255,255,255,.35); }
+#menu .item.dim .mp { color: var(--ink-dim); }
+#menu .item.sel { color: var(--tab-ink);
+  background: linear-gradient(180deg, rgba(26,21,13,.34), rgba(26,21,13,.17));
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.45), inset -1px -1px 0 rgba(255,255,255,.30), 0 1px 0 rgba(255,255,255,.16); }
+#menu .item.sel .mp { color: #bfe2ff; }
+#menu .item.sel::before { content: ''; position: absolute; left: -27px; top: 4px; width: 24px; height: 17px;
+  background: var(--hand) center / contain no-repeat; image-rendering: pixelated;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,.6)); animation: hand .5s steps(2, end) infinite; }
+@keyframes hand { 0% { transform: translateX(0); } 100% { transform: translateX(3px); } }
+
+/* ---- turn-order strip: top-CENTRE ---- */
+/* ROUND-6 (finding 6): the 'Order' plaque is GONE — ref06's CT strip carries no title, and the tab
+   was one of the fieldset/legend interrupts the critic named. The strip caps at 7 cells (ui.js
+   slices the list) so three-character '+15' labels stop crowding the ends, every cell is a FIXED
+   label slot whose dark divider now runs from the portrait's border straight down through the label
+   row (was: portraits divided, numbers floating), and the label line box grew 17 -> 19 with 8px of
+   floor so nothing touches the bottom border. top:24 keeps the window's own top edge at y=24 now
+   that no tab rises above it. Re-measure the keep-out box after any change here
+   (shots/ui/_measure_r5_keepout.py) — the camera reserves this band. */
+#turn-order { left: 50%; top: 24px; transform: translate(-50%, 6px); display: flex; gap: 5px; padding: 6px 7px 8px; align-items: flex-end; }
+#turn-order.show { transform: translate(-50%, 0); }
+#turn-order .slot { width: 41px; text-align: center; position: relative; border-right: 1px solid var(--edge); }
+#turn-order .slot:last-child { border-right: 0; }
+#turn-order .slot .pic { width: 40px; height: 40px; border: 1px solid var(--edge); background: linear-gradient(180deg, #6b7590, #2c3247 70%, #1a1d2c); background-size: 34px 34px; background-position: center; background-repeat: no-repeat; box-shadow: inset 1px 1px 0 var(--edge-in); position: relative; }
+#turn-order .slot .pic::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--team-a, #3d7be0); }
+#turn-order .slot.B .pic::after { background: var(--team-b, #d0412e); }
+#turn-order .slot.now .pic { border-color: #f4d35e; box-shadow: 0 0 0 1px #6b5410, inset 1px 1px 0 var(--edge-in); }
+#turn-order .slot span { display: block; font: var(--f-small); color: var(--ink); line-height: 19px; height: 19px; }
+/* AT: dark amber face INVERTED against the numeric labels' scheme (they are dark ink with a light
+   taupe shadow) — a light 1px shadow under the gold makes the active-turn word read first without
+   leaving the integer font scale. The cycle-4 reviews called plain #5c3a06 'middling/weak contrast'. */
+#turn-order .slot.now span { color: var(--ink-gold); text-shadow: 1px 1px 0 rgba(255,251,235,.75); }
+
+/* ---- hint bar: DEV ONLY (CRITIQUE_R2 rank 3 / regression 11). Minted without `show` unless
+   ?hud=debug, so it is invisible in every capture; H toggles it. Anchored bottom-centre, below the
+   diorama, between the two bottom blocks — never across the treeline, the tower or the roofs. ---- */
+#help { left: 50%; bottom: 6px; top: auto; font: var(--f-small); color: #e6e2d4; text-shadow: var(--out); background: none; border: none; box-shadow: none;
+  padding: 0; white-space: nowrap; display: flex; align-items: center; gap: 6px; transform: translateX(-50%); transition: opacity .5s ease-out; }
+#help.show { opacity: .82; transform: translateX(-50%); }
+#help kbd { font: var(--f-small); color: #e8e2cf; background: linear-gradient(180deg, #3a3730, #1b1a16); border: 1px solid #6d6858; box-shadow: 1px 1px 0 rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.14);
+  padding: 0 5px; height: 20px; line-height: 19px; display: inline-block; text-shadow: none; letter-spacing: .5px; }
+#help .g { margin-right: 8px; display: inline-flex; align-items: center; gap: 4px; }
+#help .g:last-child { margin-right: 0; }
+
+/* ---- announce (ability name, top-centre) ---- */
+#announce { left: 50%; top: 112px; transform: translateX(-50%) translateY(6px); padding: 5px 26px; white-space: nowrap; font: var(--f-small); }
+#announce.show { transform: translateX(-50%); }
+
+/* ---- the battle clock: DELETED IN ROUND 5, on purpose ----------------------------------------
+   the genre does print a battle clock top-right (a reference capture "8h", _07 "12.5h", _17 "5h", _50 "10h",
+   _54 "2h"), and rounds 3 and 4 chased its palette until ours measured (221,223,185) against the
+   refs' (219,217,161)/(215,237,181)/(220,240,185)/(158,220,181). The palette was never the problem.
+   The problem is the VALUE: every screenshot this project can take freezes the engine on tick 0, so
+   the element printed the string "0h" in 100% of captures across four rounds and read as a stuck
+   debug counter to every integration pass. Two of the five refs above show a clock over busy art, so
+   it is not the background either -- it is a number that never moves.
+   Measured second reason, round 5 (shots/ui/r5_occl_before, menu_mid, thresholds 10/6/40 L): the
+   glyph and its hard offset shadow were painted over 781 living-unit pixels, 562 of them HARD (>=40 L
+   change) = 4.20% of every unit pixel in that frame, at x1003-1055 y35-69, on top of enemy units B6
+   Malquor / B9 Wyrm in the top-right corner. It was the single largest HUD-over-unit occlusion in the
+   four menu captures, and it occluded them to say nothing.
+   So the element is gone: no div, no CSS, no update() branch, top-right left empty (which is also a
+   real the genre read -- the references print no clock at all). To bring it back, the capture harness
+   must first be able to produce a nonzero battle clock; see requestsForIntegrator in the round-5
+   ui report. ------------------------------------------------------------------------------------ */
+
+/* ---- forecast / target readout: dark framed plate on the right while aiming ---- */
+/* ROUND-6b (Integration final sweep): the round-4 fuzzy radial scrim was an un-integrated black
+   backing. The readout now wears the same .win frame stack as every other window — near-black keyline
+   over a 2px dithered charcoal interior — with white field ink, right-anchored at 16px and flush to
+   the bottom edge; the y>=450 ink band pins its height (padding 36/14 puts top at y450).
+   `1fr` was min-content-floored by the nowrap `.who` line, so a long readout ("Enemy · Bone Walker ·
+   Skeleton") inflated column 1 and pushed the 92px portrait off the right edge of the frame -- the
+   portrait was clipped at x=1100 in shots/ui/r4_before_melee/melee_mid.png. minmax(0,1fr) pins it. */
+#forecast { right: 16px; bottom: 0; width: 560px; display: grid; grid-template-columns: minmax(0,1fr) 92px; gap: 0 12px; align-items: end;
+  padding: 36px 16px 14px 190px;
+  border-color: #0b0a08;
+  background-color: #221e17;
+  background-image:
+    linear-gradient(45deg, rgba(0,0,0,.20) 25%, transparent 25% 75%, rgba(0,0,0,.20) 75%),
+    linear-gradient(45deg, rgba(0,0,0,.20) 25%, transparent 25% 75%, rgba(0,0,0,.20) 75%),
+    linear-gradient(180deg, #2f2a22 0%, #171410 100%);
+  background-size: 4px 4px, 4px 4px, 100% 100%;
+  background-position: 0 0, 2px 2px, 0 0; }
+/* dark plate: field values stay white (the deleted .bare rule used to paint them) */
+#forecast .srow .num { color: #fff; }
+/* the readout line ("Enemy · Bone Walker · Skeleton") is longer than the text column, and an
+   overflowing line always spills to the END edge in LTR no matter what text-align says -- so in
+   column 1 it ran under the portrait and lost its last word. It gets the card's full width instead,
+   on its own row above the portrait, with an ellipsis as a hard guard for any longer name. */
+#forecast .who { grid-column: 1 / -1; grid-row: 1; font: var(--f-small); text-align: right; margin: 0 2px 4px 0; color: var(--team-aw, #cfe2ff); letter-spacing: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#forecast .who.enemy { color: var(--team-bWho, #ffb6a8); }
+#forecast .srow { grid-column: 1; }
+#forecast .portrait { grid-column: 2; grid-row: 2 / span 3; align-self: end; }
+#forecast .eff { position: absolute; right: 112px; top: 14px; white-space: nowrap; text-align: right; font: var(--f-small); color: #fff; }
+#forecast .eff .big { font: var(--f-big); color: #ff8e7a; margin-right: 3px; letter-spacing: 1px; }
+#forecast .eff .big.up { color: #a8ff8c; }
+#forecast .eff .hit { margin-left: 14px; color: #ffe9a8; }
+#forecast .eff .ab { color: #ffe9a8; }
+/* SELF-TARGET: when the forecast's subject is the unit already printed in the caster card (a counter
+   or reaction that comes back at the actor, a self-cast), the mirrored card would repeat that unit's
+   portrait and Hp/Mp/Ct block in the opposite corner -- the same face and the same numbers twice in
+   one frame. the genre prints one window per unit. In that case ui.js drops the bars and the portrait and
+   we collapse to the effect line alone. */
+/* R18 (review17 P10): sized to its two lines (was a fixed 460x110 dark slab holding 'Effect: Fire') */
+#forecast.self { display: block; width: max-content; min-width: 0; max-width: 460px; padding: 12px 20px 10px 26px; text-align: right; }
+#forecast.self .eff { position: static; text-align: right; margin: 0 0 4px 0; }
+/* legacy raw-html forecast (confirmation prompts) keeps real window chrome */
+#forecast.raw { display: block; width: auto; min-width: 300px; max-width: 460px; font: var(--f-small); padding: 12px 18px; color: var(--ink); text-shadow: 1px 1px 0 var(--ink-hi);
+  background: linear-gradient(180deg, var(--pa) 0%, var(--pb) 55%, var(--pc) 100%); border: 2px solid var(--edge);
+  box-shadow: inset 1px 1px 0 var(--edge-in), inset -1px -1px 0 var(--edge-in2), inset 0 0 0 2px var(--band), 3px 4px 0 var(--dsh); }
+#forecast.raw b { font: inherit; }
+
+/* ---- damage numbers ---- */
+.popup { position: absolute; font: 26px/1 'Cinder Display', 'DejaVu Serif', serif; color: #fff; white-space: nowrap; pointer-events: none;
+  text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 2px 3px 0 rgba(0,0,0,.55);
+  animation: pop 1.1s cubic-bezier(.2,.7,.3,1) forwards; transform: translate(-50%, -100%); letter-spacing: 1px; }
+.popup.dmg { color: #fff; }
+.popup.heal { color: #a8ff8c; } .popup.miss { color: #eef2ff; font-size: 26px; } .popup.status { color: #ffd0ff; font-size: 18px; }
+.popup.reaction { color: #ffe08a; font-size: 18px; }
+@keyframes pop { 0% { opacity: 1; transform: translate(-50%, -84%) scale(.88); } 12% { opacity: 1; transform: translate(-50%, -128%) scale(1.22); } 26% { transform: translate(-50%, -106%) scale(1); } 78% { opacity: 1; transform: translate(-50%, -116%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -152%) scale(1); } }
+
+/* ---- title / victory card ---- */
+#title { left: 0; right: 0; top: 0; bottom: 0; transform: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.35) 0%, rgba(0,0,0,.72) 100%); border: none; box-shadow: none; padding: 0; pointer-events: none;
+  color: #ffeec0; font: var(--f-disp); letter-spacing: 3px; text-align: center; text-shadow: 2px 0 0 #23150a, -2px 0 0 #23150a, 0 2px 0 #23150a, 0 -2px 0 #23150a, 4px 5px 0 rgba(0,0,0,.85); text-transform: uppercase; }
+#title small { display: block; font: var(--f-small); color: #f2d27a; margin-top: 16px; letter-spacing: 6px; }
+#title.show { animation: title-in .55s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes title-in { 0% { opacity: 0; letter-spacing: 12px; } 30% { opacity: 1; } 100% { opacity: 1; letter-spacing: 3px; } }
+#title.victory { color: #fff6cf; }
+
+#flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s; }
+#vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(0,0,0,.42) 100%); }
+
+/* narrow viewports: keep the two bottom blocks from ever meeting */
+@media (max-width: 960px) {
+  #unit-card { width: 344px; }
+  #forecast { width: 470px; padding-left: 100px; }
+  #forecast.self { width: max-content; max-width: 380px; padding-left: 22px; }
+}
+
+/* ---- victory conditions: ref04 banner at battle start, then a compact plate top-left ---- */
+#objective { left: 16px; top: 24px; padding: 5px 12px 5px 8px; font: var(--f-small); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+#objective .lab { font: var(--f-small); color: var(--tab-ink); background: linear-gradient(180deg, var(--tabA), var(--tabB)); padding: 0 6px; height: 19px; line-height: 19px;
+  box-shadow: inset 1px 1px 0 var(--edge-in), 1px 2px 0 rgba(0,0,0,.55); text-shadow: 1px 1px 0 rgba(0,0,0,.8); }
+#objective .spd { color: var(--ink-blue); margin-left: 4px; }
+#banner { left: 50%; top: 38%; transform: translate(-50%, 6px); padding: 14px 34px 16px; text-align: center; min-width: 360px; }
+#banner.show { transform: translate(-50%, 0); animation: banner-in .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes banner-in { 0% { opacity: 0; transform: translate(-50%, 10px) scaleY(.6); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+#banner .k { font: var(--f-small); color: #4a4436; letter-spacing: 2px; text-transform: uppercase; }
+#banner .v { font: var(--f-big); color: #241f18; margin-top: 4px; letter-spacing: 1px; }
+#banner .l { font: var(--f-small); color: var(--ink-red); margin-top: 4px; }
+#unit-card .job .ldr { font: var(--f-small); color: #fff2c0; background: #7a3a12; padding: 0 5px; margin-left: 4px; text-shadow: 1px 1px 0 #000; }
+/* forecast riders: KO / Back / High ground / Charge n / status % / counter warning, stacked in the plate's empty left column */
+#forecast .tags { position: absolute; left: 14px; top: 12px; bottom: 12px; width: 168px; display: flex; flex-direction: column; gap: 3px; justify-content: flex-end; }
+#forecast .tags i { font: var(--f-small); font-style: normal; color: #e9e2cf; line-height: 19px; padding: 0 6px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#forecast .tags i.ko { color: #fff; background: #9c2a1a; }
+#forecast .tags i.good { color: #b8f59a; }
+#forecast .tags i.bad { color: #ffb0a0; }
+#forecast .tags i.ct { color: #dcc6ff; }
+#forecast.self .tags { position: static; flex-direction: row; justify-content: flex-end; margin-bottom: 4px; width: auto; }
+/* turn strip preview: where the acting unit lands after the planned action, and the queued charge */
+#turn-order .slot.next .pic { border: 2px dashed #f4d35e; }
+#turn-order .slot.next span { color: var(--ink-gold); }
+#turn-order .slot.charge::after { content: ''; position: absolute; right: -2px; top: -3px; width: 11px; height: 11px; background: #b58cff; transform: rotate(45deg); box-shadow: 0 0 0 1px #1b1030; z-index: 1; }
+#turn-order .slot.planned .pic { border: 2px dashed #c9a8ff; }
+
+/* ==== PLAYTEST r9: guide line, Status window, Controls window, see-through bottom windows ======================
+   All of it is campaign-only (#ui.guide, set by ui.js when the page carries ?slot); the capture boot never shows it.
+   Key chips are the shell's (.k-hint kbd in src/campaign/kit.css): pale parchment keycap, dark ink, 1px dark keyline,
+   so the title screen, the formation screen and the battle all name keys with one object. */
+#ui kbd { font: var(--f-small); display: inline-block; min-width: 20px; padding: 0 5px; height: 19px; line-height: 18px; text-align: center; color: #2a2418; text-shadow: none;
+  background: linear-gradient(180deg, #efe8cf, #bdb497); border: 1px solid #1a150e; box-shadow: 1px 1px 0 rgba(0,0,0,.55); }
+#ui .keys { display: inline-flex; gap: 12px; align-items: center; }
+#ui .keys .g { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+#ui .keys .g kbd + kbd { margin-left: 0; }
+#ui .keys .g kbd:last-of-type { margin-right: 4px; }
+/* guide line: the announce window grows a second row of key chips; long ability text wraps inside a fixed max width */
+#ui.guide #announce { top: 106px; white-space: normal; max-width: min(680px, calc(100vw - 32px)); width: max-content; text-align: center; padding: 6px 18px 7px; }
+#ui.guide #announce .t { display: block; line-height: 21px; }
+#ui.guide #announce .keys { margin-top: 5px; justify-content: center; flex-wrap: wrap; row-gap: 3px; color: #3a3428; }
+#ui.guide #announce.flash .t { color: var(--ink-gold); }
+/* see-through while the acting unit / cursor is behind the window */
+#unit-card.peek, #forecast.peek, #announce.peek { opacity: .28 !important; transition: opacity .18s ease-out; }
+#unit-card, #forecast { transition: opacity .25s ease-out, transform .16s cubic-bezier(.2,.8,.2,1), visibility 0s linear .16s; }
+#forecast { cursor: default; }
+#ui.guide #forecast:not(.raw):not(.self) { cursor: pointer; }
+
+/* ---- Status window: the genre's unit status sheet (portrait + gauges header, stat grid, abilities, R/S/M) ---- */
+#status { left: 50%; top: 50%; width: 620px; max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow: hidden; padding: 24px 18px 10px; z-index: 30;
+  transform: translate(-50%, -48%); font: var(--f-small); cursor: pointer; }
+#status.show { transform: translate(-50%, -50%); animation: menu-in-c .17s cubic-bezier(.2,.85,.25,1) both; }
+@keyframes menu-in-c { 0% { transform: translate(-50%, -47%) scale(.96); } 100% { transform: translate(-50%, -50%); } }
+#status .hd { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: start; }
+#status .hd .portrait { position: relative; }
+#status .nm { font: var(--f-big); color: #241f18; letter-spacing: 1px; }
+#status .nm .ldr { font: var(--f-small); color: #fff2c0; background: #7a3a12; padding: 0 5px; text-shadow: 1px 1px 0 #000; vertical-align: 3px; }
+#status .jb { color: #4a4436; } #status .jb .k2 { color: var(--ink-blue); }
+#status .lv { color: #3a3428; white-space: pre; margin-bottom: 2px; } #status .lv b { color: #241f18; }
+#status .srow { height: 21px; } #status .srow .lab { color: #241f18; text-shadow: none; } #status .srow .num { color: #241f18; line-height: 20px; } #status .srow .num small { color: #4a4436; }
+#status .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 18px; margin: 10px 0 6px; padding: 5px 8px; background: rgba(40,32,20,.10); box-shadow: inset 1px 1px 0 rgba(0,0,0,.18), inset -1px -1px 0 rgba(255,255,255,.28); }
+#status .grid .st { display: flex; justify-content: space-between; } #status .grid .st span { color: #5a5342; } #status .grid .st b { color: #241f18; }
+#status .sts { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+#status .sts i { font-style: normal; padding: 0 6px; line-height: 19px; color: #f4efdc; background: #3d5a2a; text-shadow: 1px 1px 0 #000; }
+#status .sts i.bad { background: #7a2a1a; }
+#status .cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; }
+#status .h { color: var(--tab-ink); background: linear-gradient(180deg, var(--tabA), var(--tabB)); display: inline-block; padding: 0 7px; line-height: 17px; margin-bottom: 3px; text-shadow: 1px 1px 0 #000; }
+#status .ab { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; line-height: 20px; white-space: nowrap; }
+#status .ab .n { overflow: hidden; text-overflow: ellipsis; color: #241f18; } #status .ab .n small { color: var(--ink-blue); margin-right: 3px; }
+#status .ab .m { text-align: right; color: var(--ink-blue); } #status .ab .m small { margin-left: 1px; }
+#status .ab .r { color: #4a4436; } #status .ab .r em { font-style: normal; color: #6a3aa0; }
+#status .ab.off .n, #status .ab.off .m { color: var(--ink-dim); }
+#status .sl { margin-bottom: 5px; line-height: 19px; } #status .sl .k { color: var(--tab-ink); background: linear-gradient(180deg, var(--tabA), var(--tabB)); display: inline-block; padding: 0 7px; line-height: 17px; text-shadow: 1px 1px 0 #000; } #status .sl b { color: #241f18; display: block; }
+#status .sl .d { display: block; color: #4a4436; font-size: 18px; line-height: 18px; white-space: normal; }
+#status .foot { margin-top: 6px; text-align: right; color: #5a5342; }
+/* R10 equipment: the unit's five slots (item icon, slot, name) under R/S/M, and its resolved weapon power */
+#status .gear { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(60,50,30,.2); }
+#status .gr { display: flex; align-items: center; gap: 5px; line-height: 19px; height: 19px; white-space: nowrap; min-width: 0; }
+#status .gr .k { color: #5a5342; min-width: 58px; } #status .gr b { color: #241f18; font-weight: normal; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#status .gr.wp { justify-content: space-between; } #status .gr.wp .k { min-width: 0; }
+#status .k-ico.sm { display: inline-block; flex: none; width: 16px; height: 16px; background: center / 100% 100% no-repeat; image-rendering: pixelated; }
+/* ---- Controls window (H) ---- */
+#keys { left: 50%; top: 50%; transform: translate(-50%, -48%); padding: 26px 20px 14px; z-index: 31; font: var(--f-small); cursor: pointer; }
+#keys.show { transform: translate(-50%, -50%); }
+#keys .kg { display: grid; grid-template-columns: auto auto; gap: 0 28px; }
+#keys .kc b { display: block; color: var(--tab-ink); background: linear-gradient(180deg, var(--tabA), var(--tabB)); padding: 0 7px; line-height: 17px; margin: 6px 0 4px; width: max-content; text-shadow: 1px 1px 0 #000; }
+#keys .kc b:first-child { margin-top: 0; }
+#keys .kr { display: grid; grid-template-columns: 122px auto; align-items: center; gap: 8px; min-height: 23px; white-space: nowrap; }
+#keys .kr .kk { display: inline-flex; gap: 2px; justify-content: flex-end; }
+@media (max-height: 700px) { #status { padding-top: 22px; } #status .sl .d { display: none; } }
+/* PLAYTEST r9: at 1920x1080 every window was drawn at its 1100x620 pixel size -- a status card and command window
+   the size of a postage stamp in the corners of a huge field. From ~1700x950 up the whole HUD is scaled x1.5, which
+   keeps both bitmap faces on integer multiples of their design grid (18px -> 27 = 9x3, 24px -> 36 = 12x3). ui.js
+   divides screen-space positions (damage popups) by the same factor. */
+@media (min-width: 1700px) and (min-height: 950px) { #ui { zoom: 1.5; } }
+/* OPTIONS (src/ui/prefs.js, Display > Interface Scale): an explicit scale replaces the auto rule above. ui.js and the
+   camera's HUD keep-out both measure the zoomed boxes, so nothing else needs to know. */
+html[data-uiscale="100"] #ui { zoom: 1; } html[data-uiscale="125"] #ui { zoom: 1.25; } html[data-uiscale="150"] #ui { zoom: 1.5; }
+/* Display > Text Size: reading surfaces of the HUD grow; the fixed-grid cards (unit card, forecast, CT strip, command
+   window) keep their measured geometry. Damage numbers grow by font size (their position is computed per frame). */
+html[data-textsize="large"] #ui #announce, html[data-textsize="large"] #ui #keys, html[data-textsize="large"] #ui #banner, html[data-textsize="large"] #ui #objective { zoom: 1.2; }
+html[data-textsize="largest"] #ui #announce, html[data-textsize="largest"] #ui #keys, html[data-textsize="largest"] #ui #banner, html[data-textsize="largest"] #ui #objective { zoom: 1.4; }
+html[data-textsize="large"] #ui .popup { font-size: 33px; } html[data-textsize="largest"] #ui .popup { font-size: 39px; }
+html[data-textsize="large"] #ui .popup.status, html[data-textsize="large"] #ui .popup.reaction { font-size: 24px; }
+html[data-textsize="largest"] #ui .popup.status, html[data-textsize="largest"] #ui .popup.reaction { font-size: 27px; }
+/* ---- pre-battle deployment (src/ui/deploy.js; campaign battles only) ----
+   Roster window on the right rail (the command window's idiom: plaque, recessed selection trough, glove pointer),
+   a prompt plate under the CT strip, the unit card / foe card in their usual bottom corners. */
+#deploy { right: 16px; top: 196px; width: 372px; padding: 21px 8px 8px 30px; z-index: 5; }
+#deploy.show { animation: menu-in .17s cubic-bezier(.2,.85,.25,1) both; }
+#deploy .item { position: relative; display: grid; grid-template-columns: 26px auto minmax(0, 1fr); align-items: center; gap: 0 7px; height: 30px; padding: 0 4px 0 2px; font: var(--f-small); white-space: nowrap; cursor: pointer; }
+#deploy .item .pic { width: 26px; height: 26px; border: 1px solid var(--edge); background: linear-gradient(180deg, #6b7590, #2c3247 70%, #1a1d2c); background-size: 24px 24px; background-position: center; background-repeat: no-repeat; position: relative; image-rendering: pixelated; box-shadow: inset 1px 1px 0 var(--edge-in); }
+#deploy .item .pic.empty::before { content: attr(data-init); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font: var(--f-small); text-shadow: var(--out); }
+#deploy .item .n { overflow: hidden; text-overflow: ellipsis; color: #241f18; }
+#deploy .item .n .ldr { font-style: normal; margin-left: 5px; padding: 0 4px; color: #fff2c0; background: #7a3a12; text-shadow: 1px 1px 0 #000; }
+#deploy .item .j { color: #4a4436; text-align: right; overflow: hidden; text-overflow: ellipsis; } #deploy .item .j em { font-style: normal; color: #241f18; margin-left: 2px; }
+#deploy .item.begin { grid-template-columns: 1fr; height: 28px; padding-left: 6px; }
+#deploy .item.begin .n { color: var(--ink-gold); letter-spacing: 1px; }
+#deploy .item.sel { background: linear-gradient(180deg, rgba(26,21,13,.34), rgba(26,21,13,.17)); box-shadow: inset 1px 1px 0 rgba(0,0,0,.45), inset -1px -1px 0 rgba(255,255,255,.30), 0 1px 0 rgba(255,255,255,.16); }
+#deploy .item.sel .n, #deploy .item.sel .j, #deploy .item.sel .j em { color: var(--tab-ink); text-shadow: 1px 1px 0 rgba(0,0,0,.7); }
+#deploy .item.sel.begin .n { color: #ffe9a8; }
+#deploy .item.sel::before { content: ''; position: absolute; left: -28px; top: 7px; width: 24px; height: 17px; background: var(--hand) center / contain no-repeat; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,.6)); animation: hand .5s steps(2, end) infinite; }
+#deploy .item.held { background: linear-gradient(180deg, rgba(216,134,42,.55), rgba(216,134,42,.3)); box-shadow: inset 0 0 0 1px #7a4a08; }
+#deploy .item.held .j b { font-weight: normal; color: #fff2c0; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0,0,0,.7); }
+#deploy .sep { height: 0; margin: 5px 2px 4px; border-top: 1px solid rgba(40,32,20,.35); border-bottom: 1px solid rgba(255,255,255,.35); }
+#deploy-tip { left: 50%; top: 106px; transform: translateX(-50%) translateY(6px); width: max-content; max-width: min(640px, calc(100vw - 32px)); padding: 6px 18px 7px; text-align: center; font: var(--f-small); pointer-events: none; }
+#deploy-tip.show { transform: translateX(-50%); }
+#deploy-tip .t { display: block; line-height: 21px; } #deploy-tip .t b { font-weight: normal; color: var(--ink-blue); }
+#deploy-tip .keys { margin-top: 5px; justify-content: center; flex-wrap: wrap; row-gap: 3px; color: #3a3428; }
+@media (max-width: 960px) { #deploy { width: 250px; } #deploy .item .j em { display: none; } }
+/* CT strip caption (player.js previews): the plan the strip is showing, as a narrow last cell */
+#turn-order .cap { align-self: stretch; display: flex; flex-direction: column; justify-content: center; min-width: 58px; margin-left: 2px; padding-left: 6px; border-left: 1px solid var(--edge); font: var(--f-small); line-height: 18px; color: var(--ink-gold); text-align: left; white-space: nowrap; }
+#turn-order .cap small { display: block; font: inherit; color: var(--ink); }
+#turn-order .cap small.k2 { color: #4a4436; }
+#turn-order.capt .cap { line-height: 16px; }
+#keys .kf { margin-top: 8px; padding-top: 5px; border-top: 1px solid rgba(40,32,20,.3); text-align: right; color: #5a5342; }
+
+/* R15 (integrator): a big-spell cinematic (src/vfx/cine.js) owns the screen: the HUD windows ease down to ~20% and
+   back. Opacity only (no flash), so it is safe under the Reduced / Minimal flash options. */
+/* R18 (review17 R6): fully out (to 0, then hidden) -- the 20% ghosts smeared over the showcase frame -- and back after */
+#ui.cine #unit-card, #ui.cine #forecast, #ui.cine #turn-order, #ui.cine #announce, #ui.cine #menu, #ui.cine #objective { opacity: 0 !important; visibility: hidden !important; transition: opacity .28s ease-in, visibility 0s linear .28s !important; }
+body.k-cine .sg-hint, body.k-cine .k-pausebtn, body.k-cine .k-manual { opacity: 0 !important; visibility: hidden; transition: opacity .28s ease-in, visibility 0s linear .28s; }
